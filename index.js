@@ -12,7 +12,8 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(require('cors')());
 
-var auth = new LdapAuth(settings.ldap);
+var auth = null;
+if (settings.hasOwnProperty( 'ldap' )) auth = new LdapAuth(settings.ldap);
 
 app.set('jwtTokenSecret', new Buffer(settings.jwt.secret, 'base64'));
 
@@ -30,7 +31,7 @@ var authenticate = function (username, password) {
 };
 
 app.post('/authenticate', function (req, res) {
-	if(req.body.username && req.body.password) {
+	if(auth && req.body.username && req.body.password) {
 		authenticate(req.body.username, req.body.password)
 			.then(function(user) {
 				var expires = moment().add(2, 'days').valueOf();
@@ -98,7 +99,9 @@ var port = (process.env.PORT || 3000);
 app.listen(port, function() {
 	console.log('Listening on port: ' + port);
 
-	if (typeof settings.ldap.reconnect === 'undefined' || settings.ldap.reconnect === null || settings.ldap.reconnect === false) {
-		console.warn('WARN: This service may become unresponsive when ldap reconnect is not configured.')
+	if (settings.hasOwnProperty( 'ldap' )) {
+		if (typeof settings.ldap.reconnect === 'undefined' || settings.ldap.reconnect === null || settings.ldap.reconnect === false) {
+			console.warn('WARN: This service may become unresponsive when ldap reconnect is not configured.')
+		}
 	}
 });
