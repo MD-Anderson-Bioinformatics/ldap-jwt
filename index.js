@@ -36,6 +36,7 @@ app.post('/authenticate', function (req, res) {
 				var expires = moment().add(2, 'days').valueOf();
 				var token = jwt.encode({
 					exp: expires,
+					aud: settings.jwt.clientid,
 					user_name: user.uid,
 					full_name: user.cn,
 					mail: user.mail

@@ -9,6 +9,7 @@
 		"reconnect": true
 	},
 	"jwt": {
+		"clientid": "test_clientid",
 		"secret": "test_secret"
 	}
 }
