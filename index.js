@@ -39,11 +39,11 @@ app.post('/authenticate', function (req, res) {
 					exp: expires,
 					aud: settings.jwt.clientid,
 					user_name: user.uid,
-					full_name: user.cn,
+					full_name: user.displayName,
 					mail: user.mail
 				}, app.get('jwtTokenSecret'));
 
-				res.json({token: token, full_name: user.cn});
+				res.json({token: token, full_name: user.displayName, mail: user.mail});
 			})
 			.catch(function (err) {
 				// Ldap reconnect config needs to be set to true to reliably
