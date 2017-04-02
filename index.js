@@ -15,7 +15,8 @@ app.use(require('cors')());
 var auth = null;
 if (settings.hasOwnProperty( 'ldap' )) auth = new LdapAuth(settings.ldap);
 
-app.set('jwtTokenSecret', new Buffer(settings.jwt.secret, 'base64'));
+app.set('jwtTokenSecret',
+        settings.jwt.base64 ? new Buffer(settings.jwt.secret, 'base64') : settings.jwt.secret);
 
 var authenticate = function (username, password) {
 	return new Promise(function (resolve, reject) {
