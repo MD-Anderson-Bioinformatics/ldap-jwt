@@ -1,0 +1,97 @@
+#!/bin/sh
+# Generate config file and execute server.
+
+error=0
+
+if [ "X${LDAP}" = Xenabled ] ; then
+if [ "X${LDAPURL}" = X ] ; then
+   >&2 echo Error: LDAP is enabled, but LDAPURL is not defined
+   error=1
+fi
+if [ "X${LDAPCREDENTIALS}" = X ] ; then
+   >&2 echo Error: LDAP is enabled, but LDAPCREDENTIALS is not defined
+   error=1
+fi
+if [ "X${LDAPSEARCHBASE}" = X ] ; then
+   >&2 echo Error: LDAP is enabled, but LDAPSEARCHBASE is not defined
+   error=1
+fi
+if [ "X${CLIENT_ID}" = X ] ; then
+   >&2 echo Error: LDAP is enabled, but CLIENT_ID is not defined
+   error=1
+fi
+fi
+
+if [ "X${AUTH0DOMAIN}" != X -a "X${CLIENT_ID}" = X ] ; then
+   >&2 echo Error: AUTH0DOMAIN is given, but CLIENT_ID is not defined
+   error=1
+fi
+
+if [ "X${CLIENT_ID}" != X -a "X${CLIENT_SECRET}" = X ] ; then
+   >&2 echo Error: CLIENT_ID is given, but CLIENT_SECRET is not defined
+   error=1
+fi
+
+if [ $error -eq 1 ] ; then
+   exit 1
+fi
+
+##### END Error checking
+
+# Redirect following echos to config file.
+{
+
+echo "{"
+
+# Output LDAP config if defined.
+if [ "X${LDAP}" = Xenabled ] ; then
+>&2 echo LDAP is enabled
+sed -e "s!LDAPURL!${LDAPURL}!" \
+    -e "s/LDAPCREDENTIALS/${LDAPCREDENTIALS}/" \
+    -e "s/LDAPSEARCHBASE/${LDAPSEARCHBASE}/" \
+    -e "s/LDAPSEARCHFILTER/${LDAPSEARCHFILTER:-(CN=\{\{username\}\})}/" \
+    -e "s/LDAPTIMEOUT/${LDAPTIMEOUT:-5000}/" \
+    -e "s/LDAPCONNECTTIMEOUT/${LDAPCONNECTTIMEOUT:-10000}/" \
+    -e "s/LDAPRECONNECT/${LDAPRECONNECT:-true}/" \
+<< HERE
+	"ldap": {
+		"url": "LDAPURL",
+		"bindCredentials": "LDAPCREDENTIALS",
+		"searchBase": "LDAPSEARCHBASE",
+		"searchFilter": "LDAPSEARCHFILTER",
+		"timeout": LDAPTIMEOUT,
+		"connectTimeout": LDAPCONNECTTIMEOUT,
+                "reconnect": LDAPRECONNECT
+	}
+HERE
+if [ "X${CLIENT_ID}" != X ] ; then
+    echo ,
+fi
+fi
+
+# Output JWT config if defined.
+if [ "X${CLIENT_ID}" != X ] ; then
+>&2 echo JWT is enabled
+sed -e "s/CLIENT_ID/${CLIENT_ID}/" \
+    -e "s/CLIENT_SECRET/${CLIENT_SECRET}/" \
+    -e "s/SECRET_BASE64/${SECRET_BASE64:-false}/" \
+    -e "s/JWT_TIMEOUT_UNITS/${JWT_TIMEOUT_UNITS:-days}/" \
+    -e "s/JWT_TIMEOUT/${JWT_TIMEOUT:-2}/" \
+<< HERE
+	"jwt": {
+                "clientid": "CLIENT_ID",
+		"secret": "CLIENT_SECRET",
+                "base64": SECRET_BASE64,
+                "timeout": JWT_TIMEOUT,
+                "timeout_units": "JWT_TIMEOUT_UNITS"
+	}
+HERE
+fi
+
+echo "}"
+
+# End redirection.
+} > config/config.json
+
+# Execute server
+exec npm start

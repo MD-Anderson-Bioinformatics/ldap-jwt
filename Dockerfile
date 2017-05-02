@@ -1,8 +1,8 @@
 # Example Docker Usage:
 #   docker build -t ldap-jwt .
-#   docker run -p 3000:3000 --rm -it -v "$(pwd)/config/config.test.json:/usr/src/app/config/config.json" ldap-jwt
+#   docker run -p 3000:3000 --rm -it --env-file config.txt ldap-jwt
 
-FROM node:7.8.0
+FROM node:7.9.0
 
 ENV LDAPJWT_BASE_DIR="/usr/src/app"
 EXPOSE 3000
@@ -16,4 +16,4 @@ RUN npm install
 #Copy code
 COPY . ./
 
-CMD [ "npm", "start" ]
+CMD [ "./setconfig" ]

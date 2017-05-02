@@ -1,4 +1,5 @@
 var settings = require('./config/config.json');
+console.log( 'Settings: ' + JSON.stringify( settings ) );
 
 var bodyParser = require('body-parser');
 var jwt = require('jwt-simple');
@@ -13,10 +14,12 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(require('cors')());
 
 var auth = null;
-if (settings.hasOwnProperty( 'ldap' )) auth = new LdapAuth(settings.ldap);
+if (settings.hasOwnProperty( 'ldap' ) && settings.hasOwnProperty( 'jwt' )) auth = new LdapAuth(settings.ldap);
 
-app.set('jwtTokenSecret',
-        settings.jwt.base64 ? new Buffer(settings.jwt.secret, 'base64') : settings.jwt.secret);
+if (settings.hasOwnProperty( 'jwt' )) {
+    app.set('jwtTokenSecret',
+            settings.jwt.base64 ? new Buffer(settings.jwt.secret, 'base64') : settings.jwt.secret);
+}
 
 var authenticate = function (username, password) {
 	return new Promise(function (resolve, reject) {
@@ -35,7 +38,7 @@ app.post('/authenticate', function (req, res) {
 	if(auth && req.body.username && req.body.password) {
 		authenticate(req.body.username, req.body.password)
 			.then(function(user) {
-				var expires = moment().add(2, 'days').valueOf();
+				var expires = moment().add(settings.timeout, settings.timeout_units).valueOf();
 				var token = jwt.encode({
 					exp: expires,
 					aud: settings.jwt.clientid,
@@ -74,7 +77,8 @@ app.post('/authenticate', function (req, res) {
 
 app.post('/verify', function (req, res) {
 	var token = req.body.token;
-	if (token) {
+	if (token && settings.hasOwnProperty( 'jwt' )) {
+                // jwtTokenSecret is defined iff there is a settings.jwt object.
 		try {
 			var decoded = jwt.decode(token, app.get('jwtTokenSecret'));
 
