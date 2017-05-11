@@ -1,5 +1,8 @@
 var settings = require('./config/config.json');
-console.log( 'Settings: ' + JSON.stringify( settings ) );
+
+if (settings.debug) {
+    console.log( 'Settings: ' + JSON.stringify( settings ) );
+}
 
 var bodyParser = require('body-parser');
 var jwt = require('jwt-simple');
@@ -9,7 +12,35 @@ var Promise  = require('promise');
 
 app = require('express')();
 
+if (settings.debug) {
+    app.use( function (err, req, res, next) {
+        console.log( 'Got error on request: ' + JSON.stringify( req.originalUrl ) );
+        console.log( '    error: ' + JSON.stringify( err ) );
+        next();
+    });
+
+    app.use( function (req, res, next) {
+        console.log( 'Got request: ' + req.method + ' ' + req.originalUrl );
+        next();
+    });
+}
+
+
 app.use(bodyParser.json());
+
+if (settings.debug) {
+    app.use( function (req, res, next) {
+        console.log( 'After bodyParser.json()' );
+        console.log( '  body: ' + JSON.stringify( req.body ) );
+        next();
+    });
+    app.use( function (err, req, res, next) {
+        console.log( 'Error after bodyParser.json(): ' + JSON.stringify( err ) );
+        next();
+    });
+}
+
+
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(require('cors')());
 
@@ -24,6 +55,9 @@ if (settings.hasOwnProperty( 'jwt' )) {
 var authenticate = function (username, password) {
 	return new Promise(function (resolve, reject) {
 		auth.authenticate(username, password, function (err, user) {
+                        if (settings.debug) {
+                            console.log( 'In authenticate callback' );
+                        }
 			if(err)
 				reject(err);
 			else if (!user)
@@ -36,6 +70,9 @@ var authenticate = function (username, password) {
 
 app.post('/authenticate', function (req, res) {
 	if(auth && req.body.username && req.body.password) {
+		if (settings.debug) {
+                    console.log( 'Request to authenticate ' + req.body.username );
+		}
 		authenticate(req.body.username, req.body.password)
 			.then(function(user) {
 				var expires = moment().add(settings.timeout, settings.timeout_units).valueOf();
@@ -47,6 +84,9 @@ app.post('/authenticate', function (req, res) {
 					mail: user.mail
 				}, app.get('jwtTokenSecret'));
 
+		                if (settings.debug) {
+			            console.log( 'Authentication succeeded ' + req.body.username );
+		                }
 				res.json({token: token, full_name: user.displayName, mail: user.mail});
 			})
 			.catch(function (err) {
@@ -71,6 +111,9 @@ app.post('/authenticate', function (req, res) {
 
 			});
 		} else {
+		        if (settings.debug) {
+			    console.log( 'No username or password supplied' );
+		        }
 			res.status(400).send({error: 'No username or password supplied'});
 		}
 });
