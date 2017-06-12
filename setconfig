@@ -1,19 +1,23 @@
-#!/bin/sh
+#!/bin/bash
 # Generate config file and execute server.
 
 error=0
 
 if [ "X${LDAP}" = Xenabled ] ; then
-if [ "X${LDAPURL}" = X ] ; then
-   >&2 echo Error: LDAP is enabled, but LDAPURL is not defined
+if [ "X${LDAPAUTH_URL}" = X ] ; then
+   >&2 echo Error: LDAP is enabled, but LDAPAUTH_URL is not defined
    error=1
 fi
-if [ "X${LDAPCREDENTIALS}" = X ] ; then
-   >&2 echo Error: LDAP is enabled, but LDAPCREDENTIALS is not defined
+if [ "X${LDAPAUTH_BINDDN}" = X ] ; then
+   >&2 echo Error: LDAP is enabled, but LDAPAUTH_BINDDN is not defined
    error=1
 fi
-if [ "X${LDAPSEARCHBASE}" = X ] ; then
-   >&2 echo Error: LDAP is enabled, but LDAPSEARCHBASE is not defined
+if [ "X${LDAPAUTH_BINDCREDENTIALS}" = X ] ; then
+   >&2 echo Error: LDAP is enabled, but LDAPAUTH_BINDCREDENTIALS is not defined
+   error=1
+fi
+if [ "X${LDAPAUTH_SEARCHBASE}" = X ] ; then
+   >&2 echo Error: LDAP is enabled, but LDAPAUTH_SEARCHBASE is not defined
    error=1
 fi
 if [ "X${CLIENT_ID}" = X ] ; then
@@ -33,7 +37,8 @@ if [ "X${CLIENT_ID}" != X -a "X${CLIENT_SECRET}" = X ] ; then
 fi
 
 if [ $error -eq 1 ] ; then
-   exit 1
+   # Use exit code 0 to prevent container restart.
+   exit 0
 fi
 
 ##### END Error checking
@@ -46,26 +51,73 @@ echo "{"
 # Output LDAP config if defined.
 if [ "X${LDAP}" = Xenabled ] ; then
 >&2 echo LDAP is enabled
-sed -e "s!LDAPURL!${LDAPURL}!" \
-    -e "s/LDAPCREDENTIALS/${LDAPCREDENTIALS}/" \
-    -e "s/LDAPSEARCHBASE/${LDAPSEARCHBASE}/" \
-    -e "s/LDAPSEARCHFILTER/${LDAPSEARCHFILTER:-(CN=\{\{username\}\})}/" \
-    -e "s/LDAPTIMEOUT/${LDAPTIMEOUT:-5000}/" \
-    -e "s/LDAPCONNECTTIMEOUT/${LDAPCONNECTTIMEOUT:-10000}/" \
-    -e "s/LDAPRECONNECT/${LDAPRECONNECT:-true}/" \
-<< HERE
-	"ldap": {
-		"url": "LDAPURL",
-		"bindCredentials": "LDAPCREDENTIALS",
-		"searchBase": "LDAPSEARCHBASE",
-		"searchFilter": "LDAPSEARCHFILTER",
-		"timeout": LDAPTIMEOUT,
-		"connectTimeout": LDAPCONNECTTIMEOUT,
-                "reconnect": LDAPRECONNECT
-	}
-HERE
-if [ "X${CLIENT_ID}" != X ] ; then
-    echo ,
+echo '  "ldap": {'
+env | awk '
+    BEGIN {
+        q="\"";
+        # Fix case of config options per https://github.com/vesse/node-ldapauth-fork
+        e2j["binddn"] = "bindDn";
+        e2j["bindcredentials"] = "bindCredentials";
+        e2j["searchbase"] = "searchBase";
+        e2j["searchfilter"] = "searchFilter";
+        e2j["searchattributes"] = "searchAttributes";
+        e2j["bindproperty"] = "bindProperty";
+        e2j["searchscope"] = "searchScope";
+
+        e2j["groupsearchbase"] = "groupSearchBase";
+        e2j["groupsearchfilter"] = "groupSearchFilter";
+        e2j["groupsearchattributes"] = "groupSearchAttributes";
+        e2j["groupdnproperty"] = "groupDnProperty";
+        e2j["groupsearchscope"] = "groupSearchScope";
+
+        e2j["includeraw"] = "includeRaw";
+
+        e2j["tlsoptions"] = "tlsOptions";
+        e2j["socketpath"] = "socketPath";
+        e2j["connecttimeout"] = "connectTimeout";
+        e2j["idletimeout"] = "idleTimeout";
+        e2j["strictdn"] = "strictDN";
+        e2j["queuesize"] = "queueSize";
+        e2j["queuetimeout"] = "queueTimeout";
+        e2j["queuedisable"] = "queueDisable";
+
+        # Override quote for numeric/logical options.
+        quote["timeout"] = "";
+        quote["connectTimeout"] = "";
+        quote["idleTimeout"] = "";
+        quote["reconnect"] = "";
+        quote["includeRaw"] = "";
+        quote["cache"] = "";
+        quote["strictDN"] = "";
+        quote["queueSize"] = "";
+        quote["queueTimeout"] = "";
+        quote["queueDisable"] = "";
+
+        # Set defaults.
+        def["timeout"] = "5000";
+        def["connectTimeout"] = "10000";
+        def["reconnect"] = "true";
+        def["searchFilter"] = "(CN={{username}})";
+    }
+    /^LDAPAUTH_/ {
+        var=tolower($0); sub(/=.*/,"",var); sub(/ldapauth_/,"",var);
+        if (e2j[var]) { var = e2j[var]; }
+        val=$0; sub(/[^=]*=/,"",val);
+        if (var in quote) { vq = quote[var]; } else { vq = q; }
+        if (var in def) delete def[var];
+        print "    " q var q ": " vq val vq ",";
+    }
+    END {
+        for (var in def) {
+            if (var in quote) { vq = quote[var]; } else { vq = q; }
+            print "    " q var q ": " vq def[var] vq ",";
+        }
+    }'
+echo '    "enabled": true'
+if [ "X${CLIENT_ID}" = X ] ; then
+    echo '  }'
+else
+    echo '  },'
 fi
 fi
 
@@ -95,3 +147,6 @@ echo "}"
 
 # Execute server
 exec npm start
+
+# Should not happen.  Use exit code 0 to prevent container restart.
+exit 0
