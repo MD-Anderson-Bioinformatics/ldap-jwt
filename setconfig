@@ -9,8 +9,7 @@ if [ "X${LDAPAUTH_URL}" = X ] ; then
    error=1
 fi
 if [ "X${LDAPAUTH_BINDDN}" = X ] ; then
-   >&2 echo Error: LDAP is enabled, but LDAPAUTH_BINDDN is not defined
-   error=1
+   >&2 echo Warning: LDAP is enabled, but LDAPAUTH_BINDDN is not defined
 fi
 if [ "X${LDAPAUTH_BINDCREDENTIALS}" = X ] ; then
    >&2 echo Error: LDAP is enabled, but LDAPAUTH_BINDCREDENTIALS is not defined
