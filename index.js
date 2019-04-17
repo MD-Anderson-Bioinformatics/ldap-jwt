@@ -31,7 +31,7 @@ app.use(bodyParser.json());
 if (settings.debug) {
     app.use( function (req, res, next) {
         console.log( 'After bodyParser.json()' );
-        console.log( '  body: ' + JSON.stringify( req.body ) );
+        //console.log( '  body: ' + JSON.stringify( req.body ) ); <-- this can print passwords to log
         next();
     });
     app.use( function (err, req, res, next) {
