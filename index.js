@@ -75,7 +75,7 @@ app.post('/authenticate', function (req, res) {
 		}
 		authenticate(req.body.username, req.body.password)
 			.then(function(user) {
-				var expires = moment().add(settings.timeout, settings.timeout_units).valueOf();
+				var expires = parseInt(moment().add(2, 'days').format("X"));
 				var token = jwt.encode({
 					exp: expires,
 					aud: settings.jwt.clientid,
@@ -125,14 +125,10 @@ app.post('/verify', function (req, res) {
 		try {
 			var decoded = jwt.decode(token, app.get('jwtTokenSecret'));
 
-			if (decoded.exp <= Date.now()) {
+			if (decoded.exp <= parseInt(moment().format("X"))) {
 				res.status(400).send({ error: 'Access token has expired'});
 			} else {
-				res.json({
-					user_name: decoded.user_name,
-					full_name: decoded.full_name,
-					mail: decoded.mail
-				});
+				res.json(decoded);
 			}
 		} catch (err) {
 			res.status(500).send({ error: 'Access token could not be decoded'});
