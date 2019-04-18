@@ -82,7 +82,7 @@ app.post('/authenticate', function (req, res) {
 		}
 		authenticate(req.body.username, req.body.password)
 			.then(function(user) {
-				var expires = parseInt(moment().add(2, 'days').format("X"));
+				var expires = moment().add(settings.jwt.timeout, settings.jwt.timeout_units).valueOf();
 				var token = jwt.encode({
 					exp: expires,
 					aud: settings.jwt.clientid,
@@ -90,10 +90,10 @@ app.post('/authenticate', function (req, res) {
 					full_name: user.displayName,
 					mail: user.mail
 				}, app.get('jwtTokenSecret'));
-
-		                if (settings.debug) {
-			            console.log( 'Authentication succeeded ' + req.body.username );
-		                }
+				if (settings.debug) {
+					console.log('Authentication succeeded ' + req.body.username );
+					console.log("JWT expiration: " + moment(expires).format("MMMM Do YYYY, h:mm:ss a"));
+				}
 				res.json({token: token, full_name: user.displayName, mail: user.mail});
 			})
 			.catch(function (err) {
