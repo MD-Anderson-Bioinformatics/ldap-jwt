@@ -10,13 +10,15 @@ Heavily based on the work of [gregfroese/ldapservice](https://github.com/gregfro
 * Removed support for RabbitMQ
 * Updated npm dependencies
 * Simplified endpoints
+* Added SSL 
 
 
 ## Usage
 
 #### 1. SSL Certificates
 
-Place SSL certificates in ssl/server.key and ssl/server.crt
+Generate / obtain SSL certificates, and place the .crt and .key files in an
+'ssl' directory at the top-level of the directory: ssl/server.key and ssl/server.crt
 
 #### 2. Configuration variables
 
@@ -28,8 +30,8 @@ LDAPAUTH_URL=ldaps://hostname
 LDAPAUTH_BINDCREDENTIALS=secret
 LDAPAUTH_SEARCHBASE=dc=example,dc=com
 LDAPAUTH_BINDDN=cn=bind_user,dc=examle,dc=com
-CLIENT_ID=the-client-id
-CLIENT_SECRET=the-client-secret
+CLIENT_ID=test-client-id
+CLIENT_SECRET=tets-client-secret
 DEBUG=true
 ```
 
