@@ -139,7 +139,16 @@ sed -e "s/CLIENT_ID/${CLIENT_ID}/" \
 HERE
 fi
 
+# Debug
+if [ "X${DEBUG}" != X ] ; then
+>&2 echo DEBUG is enabled
+ echo ' ,
+	"debug": "true"'
+fi
+
+
 echo "}"
+
 
 # End redirection.
 } > config/config.json

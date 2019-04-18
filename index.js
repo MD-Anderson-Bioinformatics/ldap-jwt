@@ -1,7 +1,10 @@
 var settings = require('./config/config.json');
 
 if (settings.debug) {
-    console.log( 'Settings: ' + JSON.stringify( settings ) );
+  console.log("Node version: "+process.version);
+  var settingsToShow = JSON.parse(JSON.stringify(settings));
+  delete settingsToShow.ldap.bindCredentials;
+  console.log( 'Settings: (bindCredentials not displayed) ' + JSON.stringify( settingsToShow, null, 2 ) );
 }
 
 var bodyParser = require('body-parser');
@@ -9,6 +12,10 @@ var jwt = require('jwt-simple');
 var moment = require('moment');
 var LdapAuth = require('ldapauth-fork');
 var Promise  = require('promise');
+var fs = require('fs'),
+    https = require('https'),
+    express = require('express');
+
 
 app = require('express')();
 
@@ -71,7 +78,7 @@ var authenticate = function (username, password) {
 app.post('/authenticate', function (req, res) {
 	if(auth && req.body.username && req.body.password) {
 		if (settings.debug) {
-                    console.log( 'Request to authenticate ' + req.body.username );
+			console.log( 'Request to authenticate ' + req.body.username );
 		}
 		authenticate(req.body.username, req.body.password)
 			.then(function(user) {
@@ -140,12 +147,17 @@ app.post('/verify', function (req, res) {
 
 
 var port = (process.env.PORT || 3000);
-app.listen(port, function() {
-	console.log('Listening on port: ' + port);
 
-	if (settings.hasOwnProperty( 'ldap' )) {
-		if (typeof settings.ldap.reconnect === 'undefined' || settings.ldap.reconnect === null || settings.ldap.reconnect === false) {
-			console.warn('WARN: This service may become unresponsive when ldap reconnect is not configured.')
-		}
-	}
+
+var options = {
+    key:  fs.readFileSync("./ssl/server.key"),
+    cert: fs.readFileSync("./ssl/server.crt"),
+};
+var server = https.createServer(options,app).listen(port,function(){
+	console.log("Express server listenting on port " + port);
+		app.on("error",(err) => {
+		console.warn("ERROR: "+err.stack);
+	});
 });
+
+
