@@ -48,6 +48,15 @@ var auth = null;
 if (settings.hasOwnProperty( 'ldap' ) && settings.hasOwnProperty( 'jwt' )) auth = new LdapAuth(settings.ldap);
 
 if (settings.hasOwnProperty( 'jwt' )) {
+    if (!settings.jwt.hasOwnProperty('timeout')) {
+        console.log ('Settings.jwt.timeout not set - using default');
+        settings.jwt.timeout = 1;
+    }
+    if (!settings.jwt.hasOwnProperty('timeout_units')) {
+        console.log ('Settings.jwt.timeout_units not set - using default');
+        settings.jwt.timeout_units = 'hour';
+    }
+    console.log('JWT tokens will expire after ' + settings.jwt.timeout + ' ' + settings.jwt.timeout_units);
     app.set('jwtTokenSecret',
             settings.jwt.base64 ? new Buffer(settings.jwt.secret, 'base64') : settings.jwt.secret);
 }
@@ -75,7 +84,7 @@ app.post('/authenticate', function (req, res) {
 		}
 		authenticate(req.body.username, req.body.password)
 			.then(function(user) {
-				var expires = parseInt(moment().add(2, 'days').format("X"));
+				var expires = moment().add(settings.jwt.timeout, settings.jwt.timeout_units).valueOf();
 				var token = jwt.encode({
 					exp: expires,
 					aud: settings.jwt.clientid,
@@ -119,22 +128,31 @@ app.post('/authenticate', function (req, res) {
 });
 
 app.post('/verify', function (req, res) {
+        if (settings.debug) console.log ('> verify');
 	var token = req.body.token;
 	if (token && settings.hasOwnProperty( 'jwt' )) {
                 // jwtTokenSecret is defined iff there is a settings.jwt object.
 		try {
 			var decoded = jwt.decode(token, app.get('jwtTokenSecret'));
 
-			if (decoded.exp <= parseInt(moment().format("X"))) {
+			if (decoded.exp <= Date.now()) {
 				res.status(400).send({ error: 'Access token has expired'});
+				if (settings.debug) {
+                                    console.log ('< verify 400 expired');
+                                    console.log ('Expiry date: ' + new Date(decoded.exp).toLocaleString());
+                                    console.log ('Now: ' + new Date(Date.now()).toLocaleString());
+                                }
 			} else {
 				res.json(decoded);
+				if (settings.debug) console.log ('< verify succeeded');
 			}
 		} catch (err) {
 			res.status(500).send({ error: 'Access token could not be decoded'});
+			if (settings.debug) console.log ('< verify 400 cannot decode');
 		}
 	} else {
 		res.status(400).send({ error: 'Access token is missing'});
+		if (settings.debug) console.log ('< verify 400 no token');
 	}
 });
 
