@@ -84,7 +84,7 @@ var authenticate = function (username, password) {
 	});
 };
 
-app.post('/authenticate', function (req, res) {
+app.post('/ldap-jwt/authenticate', function (req, res) {
 	if(auth && req.body.username && req.body.password) {
 		if (settings.debug) {
 			console.log( 'Request to authenticate ' + req.body.username );
@@ -134,7 +134,7 @@ app.post('/authenticate', function (req, res) {
 		}
 });
 
-app.post('/verify', function (req, res) {
+app.post('/ldap-jwt/verify', function (req, res) {
 	if (settings.debug) console.log("> verify");
 	var token = req.body.token;
 	if (token && settings.hasOwnProperty( 'jwt' )) {

@@ -50,12 +50,12 @@ $ docker run -p 3000:3000 --rm -it --env-file .env --name ldap-jwt ldap_jwt
 #### 5. Manual test
 
 ```bash
-$ curl -k -d '{"username":"<username>","password":"<password>"}' -H "Content-Type: application/json" -X POST "https://<hostname>/authenticate"
+$ curl -k -d '{"username":"<username>","password":"<password>"}' -H "Content-Type: application/json" -X POST "https://<hostname>/ldap-jwt/authenticate"
 ```
 
 ## Endpoints
 
-### /authenticate
+### /ldap-jwt/authenticate
 
 **Payload**
 
@@ -75,7 +75,7 @@ $ curl -k -d '{"username":"<username>","password":"<password>"}' -H "Content-Typ
 }
 ```
 
-### /verify
+### /ldap-jwt/verify
 
 **Payload**
 
