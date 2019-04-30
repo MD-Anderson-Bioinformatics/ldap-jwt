@@ -151,7 +151,10 @@ app.post('/ldap-jwt/verify', function (req, res) {
 				}
 			} else {
 				res.json(decoded);
-				if (settings.debug) console.log ("< verify succeeded");
+				if (settings.debug){
+					console.log("< verify succeeded");
+					console.log("decoded: "+JSON.stringify(decoded,undefined,10));
+				}
 			}
 		} catch (err) {
 			res.status(500).send({ error: 'Access token could not be decoded'});
