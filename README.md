@@ -31,7 +31,7 @@ LDAPAUTH_BINDCREDENTIALS=secret
 LDAPAUTH_SEARCHBASE=dc=example,dc=com
 LDAPAUTH_BINDDN=cn=bind_user,dc=examle,dc=com
 CLIENT_ID=test-client-id
-CLIENT_SECRET=tets-client-secret
+CLIENT_SECRET=test-client-secret
 DEBUG=true
 ```
 
