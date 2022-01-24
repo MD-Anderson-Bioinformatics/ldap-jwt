@@ -112,7 +112,8 @@ env | awk '
             print "    " q var q ": " vq def[var] vq ",";
         }
     }'
-echo '    "enabled": true'
+echo '    "enabled": true,'
+echo '    "searchAttributes": ["mail", "displayName", "memberOf"]'
 if [ "X${CLIENT_ID}" = X ] ; then
     echo '  }'
 else
@@ -135,7 +136,8 @@ sed -e "s/CLIENT_ID/${CLIENT_ID}/" \
                 "base64": SECRET_BASE64,
                 "timeout": JWT_TIMEOUT,
                 "timeout_units": "JWT_TIMEOUT_UNITS"
-	}
+	},
+	"debug": true
 HERE
 fi
 
