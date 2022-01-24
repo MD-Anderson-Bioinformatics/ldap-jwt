@@ -82,15 +82,22 @@ app.post('/authenticate', function (req, res) {
 		if (settings.debug) {
                     console.log( 'Request to authenticate ' + req.body.username );
 		}
-		authenticate(req.body.username, req.body.password)
+		authenticate(req.body.username, req.body.password, req.body.authorized_group)
 			.then(function(user) {
+				if (req.body.authorized_group != undefined) {
+					if (settings.debug) console.log("Only authenticating members of " + req.body.authorized_group);
+					if (!userInAuthorizedGroup(user.memberOf, req.body.authorized_group)) {
+						throw "User not in authorized_group";
+					}
+				}
 				var expires = moment().add(settings.jwt.timeout, settings.jwt.timeout_units).valueOf();
 				var token = jwt.encode({
 					exp: expires,
 					aud: settings.jwt.clientid,
 					user_name: user.uid,
 					full_name: user.displayName,
-					mail: user.mail
+					mail: user.mail,
+					authorized_group: req.body.authorized_group
 				}, app.get('jwtTokenSecret'));
 
 		                if (settings.debug) {
@@ -107,6 +114,8 @@ app.post('/authenticate', function (req, res) {
 
 				if (err.name === 'InvalidCredentialsError' || (typeof err === 'string' && err.match(/no such user/i)) ) {
 					res.status(401).send({ error: 'Wrong user or password'});
+				} else if (err === "User not in authorized_group") {
+					res.status(401).send({ error: "User not in authorized_group" });
 				} else {
 					// ldapauth-fork or underlying connections may be in an unusable state.
 					// Reconnect option does re-establish the connections, but will not
@@ -155,6 +164,14 @@ app.post('/verify', function (req, res) {
 		if (settings.debug) console.log ('< verify 400 no token');
 	}
 });
+
+let userInAuthorizedGroup = function(users_memberOf, authorized_group) {
+	if (users_memberOf.includes(authorized_group)) {
+		return true;
+	} else {
+		return false;
+	}
+}
 
 
 var port = (process.env.PORT || 3000);
