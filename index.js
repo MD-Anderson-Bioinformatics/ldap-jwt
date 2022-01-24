@@ -151,6 +151,14 @@ app.post('/verify', function (req, res) {
                                     console.log ('Expiry date: ' + new Date(decoded.exp).toLocaleString());
                                     console.log ('Now: ' + new Date(Date.now()).toLocaleString());
                                 }
+			} else if (req.body.authorized_group != undefined) {
+				if (decoded.hasOwnProperty("authorized_group") && decoded.authorized_group === req.body.authorized_group) {
+					res.json(decoded);
+					if (settings.debug) console.log('< verify succeeded for user in authorized_group');
+				} else {
+					res.status(401).send({ error: 'User not in authorized_group' });
+					if (settings.debug) console.error('< verify failed; user not in authorized_group');
+				}
 			} else {
 				res.json(decoded);
 				if (settings.debug) console.log ('< verify succeeded');
