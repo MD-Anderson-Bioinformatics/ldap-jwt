@@ -113,7 +113,7 @@ env | awk '
         }
     }'
 echo '    "enabled": true,'
-echo '    "searchAttributes": ["mail", "displayName", "memberOf"]'
+echo '    "searchAttributes": ["mail", "displayName", "memberOf", "uid"]'
 if [ "X${CLIENT_ID}" = X ] ; then
     echo '  }'
 else
