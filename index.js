@@ -176,17 +176,17 @@ app.post('/verify', function (req, res) {
 	}
 });
 
-let userInAuthorizedGroups = function(usersGroups, authorized_groups) {
-	if (!Array.isArray(usersGroups)) usersGroups = [ usersGroups ];
+let userInAuthorizedGroups = function(userGroups, authorized_groups) {
+	if (!Array.isArray(userGroups)) userGroups = [ userGroups ];
 	if (!Array.isArray(authorized_groups)) authorized_groups = [ authorized_groups ];
-	if (settings.debug) console.log({msg: 'Checking groups in userInAuthorizedGroups', usersGroups: usersGroups, authorized_groups: authorized_groups});
-	return usersGroups.some(group => authorized_groups.includes(group));
+	if (settings.debug) console.log({msg: 'Checking groups in userInAuthorizedGroups', userGroups: userGroups, authorized_groups: authorized_groups});
+	return userGroups.some(group => authorized_groups.includes(group));
 }
 
-let userGroupAuthGroupIntersection = function(usersGroups, authorized_groups) {
-	if (!Array.isArray(usersGroups)) usersGroups = [ usersGroups ];
+let userGroupAuthGroupIntersection = function(userGroups, authorized_groups) {
+	if (!Array.isArray(userGroups)) userGroups = [ userGroups ];
 	if (!Array.isArray(authorized_groups)) authorized_groups = [ authorized_groups ];
-	return usersGroups.filter(group => authorized_groups.includes(group));
+	return userGroups.filter(group => authorized_groups.includes(group));
 }
 
 
