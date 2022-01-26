@@ -102,6 +102,7 @@ app.post('/authenticate', function (req, res) {
 				}, app.get('jwtTokenSecret'));
 
 		                if (settings.debug) {
+			            console.log({msg: 'Added these user groups to token payload', usersGroupsForPayload: usersGroupsForPayload});
 			            console.log( 'Authentication succeeded for ' + req.body.username );
 		                }
 				res.json({token: token, full_name: user.displayName, mail: user.mail});
@@ -177,6 +178,7 @@ app.post('/verify', function (req, res) {
 let userInAuthorizedGroups = function(usersGroups, authorized_groups) {
 	if (!Array.isArray(usersGroups)) usersGroups = [ usersGroups ];
 	if (!Array.isArray(authorized_groups)) authorized_groups = [ authorized_groups ];
+	if (settings.debug) console.log({msg: 'Checking groups in userInAuthorizedGroups', usersGroups: usersGroups, authorized_groups: authorized_groups});
 	return usersGroups.some(group => authorized_groups.includes(group));
 }
 
