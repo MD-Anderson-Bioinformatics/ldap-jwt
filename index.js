@@ -91,13 +91,14 @@ app.post('/authenticate', function (req, res) {
 					}
 				}
 				var expires = moment().add(settings.jwt.timeout, settings.jwt.timeout_units).valueOf();
+				let usersGroupsForPayload = userGroupAuthGroupIntersection(user.memberOf, req.body.authorized_groups);
 				var token = jwt.encode({
 					exp: expires,
 					aud: settings.jwt.clientid,
 					user_name: user.uid,
 					full_name: user.displayName,
 					mail: user.mail,
-					authorized_groups: req.body.authorized_groups
+					authorized_groups: usersGroupsForPayload
 				}, app.get('jwtTokenSecret'));
 
 		                if (settings.debug) {
@@ -177,6 +178,11 @@ let userInAuthorizedGroups = function(usersGroups, authorized_groups) {
 	if (!Array.isArray(usersGroups)) usersGroups = [ usersGroups ];
 	if (!Array.isArray(authorized_groups)) authorized_groups = [ authorized_groups ];
 	return usersGroups.some(group => authorized_groups.includes(group));
+}
+
+let userGroupAuthGroupIntersection = function(usersGroups, authorized_groups) {
+	if (!Array.isArray(authorized_groups)) authorized_groups = [ authorized_groups ];
+	return usersGroups.filter(group => authorized_groups.includes(group));
 }
 
 
