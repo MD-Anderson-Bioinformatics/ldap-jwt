@@ -87,23 +87,23 @@ app.post('/authenticate', function (req, res) {
 				if (settings.debug) console.log({user: user});
 				if (req.body.authorized_groups != undefined) {
 					if (settings.debug) console.log("authorized_groups specified: " + req.body.authorized_groups);
+					var userGroupsForPayload = userGroupAuthGroupIntersection(user.memberOf, req.body.authorized_groups);
 					if (!userInAuthorizedGroups(user.memberOf, req.body.authorized_groups)) {
 						throw "User not in authorized_groups";
 					}
+					if (settings.debug) console.log({userGroupsForPayload: userGroupsForPayload});
 				}
 				var expires = moment().add(settings.jwt.timeout, settings.jwt.timeout_units).valueOf();
-				let usersGroupsForPayload = userGroupAuthGroupIntersection(user.memberOf, req.body.authorized_groups);
 				var token = jwt.encode({
 					exp: expires,
 					aud: settings.jwt.clientid,
 					user_name: user.uid,
 					full_name: user.displayName,
 					mail: user.mail,
-					user_authorized_groups: usersGroupsForPayload
+					user_authorized_groups: userGroupsForPayload
 				}, app.get('jwtTokenSecret'));
 
 		                if (settings.debug) {
-			            console.log({msg: 'Added these user groups to token payload', usersGroupsForPayload: usersGroupsForPayload});
 			            console.log( 'Authentication succeeded for ' + req.body.username );
 		                }
 				res.json({token: token, full_name: user.displayName, mail: user.mail});
