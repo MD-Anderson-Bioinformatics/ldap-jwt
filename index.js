@@ -1,7 +1,7 @@
 var settings = require('./config/config.json');
 
 if (settings.debug) {
-    console.log( 'Settings: ' + JSON.stringify( settings ) );
+    console.log( 'Settings: ' + JSON.stringify( settings, null, 5 ) );
 }
 
 var bodyParser = require('body-parser');
@@ -84,6 +84,7 @@ app.post('/authenticate', function (req, res) {
 		}
 		authenticate(req.body.username, req.body.password, req.body.authorized_groups)
 			.then(function(user) {
+				if (settings.debug) console.log({user: user});
 				if (req.body.authorized_groups != undefined) {
 					if (settings.debug) console.log("authorized_groups specified: " + req.body.authorized_groups);
 					if (!userInAuthorizedGroups(user.memberOf, req.body.authorized_groups)) {
