@@ -152,7 +152,7 @@ app.post('/verify', function (req, res) {
                                     console.log ('Now: ' + new Date(Date.now()).toLocaleString());
                                 }
 			} else if (req.body.authorized_group != undefined) {
-				if (decoded.hasOwnProperty("authorized_group") && decoded.authorized_group === req.body.authorized_group) {
+				if (decoded.hasOwnProperty("authorized_group") && userInAuthorizedGroup(req.body.authorized_group, decoded.authorized_group)) {
 					res.json(decoded);
 					if (settings.debug) console.log('< verify succeeded for user in authorized_group');
 				} else {
@@ -174,11 +174,7 @@ app.post('/verify', function (req, res) {
 });
 
 let userInAuthorizedGroup = function(users_memberOf, authorized_group) {
-	if (users_memberOf.includes(authorized_group)) {
-		return true;
-	} else {
-		return false;
-	}
+	return users_memberOf.some(group => authorized_group.includes(group));
 }
 
 
