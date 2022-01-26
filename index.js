@@ -98,7 +98,7 @@ app.post('/authenticate', function (req, res) {
 					user_name: user.uid,
 					full_name: user.displayName,
 					mail: user.mail,
-					users_authorized_groups: usersGroupsForPayload
+					user_authorized_groups: usersGroupsForPayload
 				}, app.get('jwtTokenSecret'));
 
 		                if (settings.debug) {
@@ -154,7 +154,7 @@ app.post('/verify', function (req, res) {
                                     console.log ('Now: ' + new Date(Date.now()).toLocaleString());
                                 }
 			} else if (req.body.authorized_groups != undefined) {
-				if (decoded.hasOwnProperty("users_authorized_groups") && userInAuthorizedGroups(decoded.users_authorized_groups, req.body.authorized_groups)) {
+				if (decoded.hasOwnProperty("user_authorized_groups") && userInAuthorizedGroups(decoded.user_authorized_groups, req.body.authorized_groups)) {
 					res.json(decoded);
 					if (settings.debug) console.log('< verify succeeded for user in authorized_groups');
 				} else {
