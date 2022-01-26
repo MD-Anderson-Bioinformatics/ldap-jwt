@@ -174,6 +174,8 @@ app.post('/verify', function (req, res) {
 });
 
 let userInAuthorizedGroups = function(usersGroups, authorized_groups) {
+	if (!Array.isArray(usersGroups)) usersGroups = [ usersGroups ];
+	if (!Array.isArray(authorized_groups)) authorized_groups = [ authorized_groups ];
 	return usersGroups.some(group => authorized_groups.includes(group));
 }
 
