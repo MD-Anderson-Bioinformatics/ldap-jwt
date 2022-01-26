@@ -85,7 +85,7 @@ app.post('/authenticate', function (req, res) {
 		authenticate(req.body.username, req.body.password, req.body.authorized_group)
 			.then(function(user) {
 				if (req.body.authorized_group != undefined) {
-					if (settings.debug) console.log("Only authenticating members of " + req.body.authorized_group);
+					if (settings.debug) console.log("authorized_group specified: " + req.body.authorized_group);
 					if (!userInAuthorizedGroup(user.memberOf, req.body.authorized_group)) {
 						throw "User not in authorized_group";
 					}
@@ -101,7 +101,7 @@ app.post('/authenticate', function (req, res) {
 				}, app.get('jwtTokenSecret'));
 
 		                if (settings.debug) {
-			            console.log( 'Authentication succeeded ' + req.body.username );
+			            console.log( 'Authentication succeeded for ' + req.body.username );
 		                }
 				res.json({token: token, full_name: user.displayName, mail: user.mail});
 			})
