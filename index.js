@@ -82,12 +82,12 @@ app.post('/authenticate', function (req, res) {
 		if (settings.debug) {
                     console.log( 'Request to authenticate ' + req.body.username );
 		}
-		authenticate(req.body.username, req.body.password, req.body.authorized_group)
+		authenticate(req.body.username, req.body.password, req.body.authorized_groups)
 			.then(function(user) {
-				if (req.body.authorized_group != undefined) {
-					if (settings.debug) console.log("authorized_group specified: " + req.body.authorized_group);
-					if (!userInAuthorizedGroup(user.memberOf, req.body.authorized_group)) {
-						throw "User not in authorized_group";
+				if (req.body.authorized_groups != undefined) {
+					if (settings.debug) console.log("authorized_groups specified: " + req.body.authorized_groups);
+					if (!userInAuthorizedGroups(user.memberOf, req.body.authorized_groups)) {
+						throw "User not in authorized_groups";
 					}
 				}
 				var expires = moment().add(settings.jwt.timeout, settings.jwt.timeout_units).valueOf();
@@ -97,7 +97,7 @@ app.post('/authenticate', function (req, res) {
 					user_name: user.uid,
 					full_name: user.displayName,
 					mail: user.mail,
-					authorized_group: req.body.authorized_group
+					authorized_groups: req.body.authorized_groups
 				}, app.get('jwtTokenSecret'));
 
 		                if (settings.debug) {
@@ -114,8 +114,8 @@ app.post('/authenticate', function (req, res) {
 
 				if (err.name === 'InvalidCredentialsError' || (typeof err === 'string' && err.match(/no such user/i)) ) {
 					res.status(401).send({ error: 'Wrong user or password'});
-				} else if (err === "User not in authorized_group") {
-					res.status(401).send({ error: "User not in authorized_group" });
+				} else if (err === "User not in authorized_groups") {
+					res.status(401).send({ error: "User not in authorized_groups" });
 				} else {
 					// ldapauth-fork or underlying connections may be in an unusable state.
 					// Reconnect option does re-establish the connections, but will not
@@ -151,13 +151,13 @@ app.post('/verify', function (req, res) {
                                     console.log ('Expiry date: ' + new Date(decoded.exp).toLocaleString());
                                     console.log ('Now: ' + new Date(Date.now()).toLocaleString());
                                 }
-			} else if (req.body.authorized_group != undefined) {
-				if (decoded.hasOwnProperty("authorized_group") && userInAuthorizedGroup(req.body.authorized_group, decoded.authorized_group)) {
+			} else if (req.body.authorized_groups != undefined) {
+				if (decoded.hasOwnProperty("authorized_groups") && userInAuthorizedGroups(req.body.authorized_groups, decoded.authorized_groups)) {
 					res.json(decoded);
-					if (settings.debug) console.log('< verify succeeded for user in authorized_group');
+					if (settings.debug) console.log('< verify succeeded for user in authorized_groups');
 				} else {
-					res.status(401).send({ error: 'User not in authorized_group' });
-					if (settings.debug) console.error('< verify failed; user not in authorized_group');
+					res.status(401).send({ error: 'User not in authorized_groups' });
+					if (settings.debug) console.error('< verify failed; user not in authorized_groups');
 				}
 			} else {
 				res.json(decoded);
@@ -173,8 +173,8 @@ app.post('/verify', function (req, res) {
 	}
 });
 
-let userInAuthorizedGroup = function(users_memberOf, authorized_group) {
-	return users_memberOf.some(group => authorized_group.includes(group));
+let userInAuthorizedGroups = function(usersGroups, authorized_groups) {
+	return usersGroups.some(group => authorized_groups.includes(group));
 }
 
 
