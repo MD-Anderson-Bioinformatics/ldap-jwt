@@ -159,7 +159,7 @@ app.post('/verify', function (req, res) {
 					res.json(decoded);
 					if (settings.debug) console.log('< verify succeeded for user in authorized_groups');
 				} else {
-					res.status(401).send({ error: 'User not in authorized_groups' });
+					res.status(401).send({ error: 'Token not authorized for specified groups' });
 					if (settings.debug) console.error('< verify failed; user not in authorized_groups');
 				}
 			} else {
