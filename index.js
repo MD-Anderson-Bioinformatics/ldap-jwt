@@ -89,18 +89,31 @@ app.post('/ldap-jwt/authenticate', function (req, res) {
 		if (settings.debug) {
 			console.log( 'Request to authenticate ' + req.body.username );
 		}
-		authenticate(req.body.username, req.body.password)
+		authenticate(req.body.username, req.body.password, req.body.authorized_groups)
 			.then(function(user) {
+				if (settings.debug) console.log({user: user});
+				if (req.body.authorized_groups != undefined) {
+					if (settings.debug) console.log("authorized_groups specified: " + req.body.authorized_groups);
+					if (!user.hasOwnProperty("memberOf")) {
+						throw "Server not configured for authorized_group verification";
+					}
+					var userGroupsForPayload = userGroupAuthGroupIntersection(user.memberOf, req.body.authorized_groups);
+					if (!userInAuthorizedGroups(user.memberOf, req.body.authorized_groups)) {
+						throw "User not in authorized_groups";
+					}
+					if (settings.debug) console.log({userGroupsForPayload: userGroupsForPayload});
+				}
 				var expires = moment().add(settings.jwt.timeout, settings.jwt.timeout_units).valueOf();
 				var token = jwt.encode({
 					exp: expires,
 					aud: settings.jwt.clientid,
 					user_name: user.uid,
 					full_name: user.displayName,
-					mail: user.mail
+					mail: user.mail,
+					user_authorized_groups: userGroupsForPayload
 				}, app.get('jwtTokenSecret'));
 				if (settings.debug) {
-					console.log('Authentication succeeded ' + req.body.username );
+					console.log('Authentication succeeded for ' + req.body.username );
 					console.log("JWT expiration: " + moment(expires).format("MMMM Do YYYY, h:mm:ss a"));
 				}
 				res.json({token: token, full_name: user.displayName, mail: user.mail});
@@ -114,6 +127,8 @@ app.post('/ldap-jwt/authenticate', function (req, res) {
 
 				if (err.name === 'InvalidCredentialsError' || (typeof err === 'string' && err.match(/no such user/i)) ) {
 					res.status(401).send({ error: 'Wrong user or password'});
+				} else if (err == "Server not configured for authorized_group verification" || err == "User not in authorized_groups") {
+					res.status(401).send({error: "User is not authorized"});
 				} else {
 					// ldapauth-fork or underlying connections may be in an unusable state.
 					// Reconnect option does re-establish the connections, but will not
@@ -149,6 +164,14 @@ app.post('/ldap-jwt/verify', function (req, res) {
 					console.log("Expiry data: " + new Date(decoded.exp).toLocaleString());
 					console.log("Now: " + new Date(Date.now()).toLocaleString());
 				}
+			} else if (req.body.authorized_groups != undefined) {
+				if (decoded.hasOwnProperty("user_authorized_groups") && userInAuthorizedGroups(decoded.user_authorized_groups, req.body.authorized_groups)) {
+					res.json(decoded);
+					if (settings.debug) console.log('< verify succeeded for user in authorized_groups');
+				} else {
+					res.status(401).send({error: 'Token not authorized for specified groups'});
+					if (settings.debug) console.error('< verify failed; user not in authorized_groups');
+				}
 			} else {
 				res.json(decoded);
 				if (settings.debug){
@@ -166,6 +189,18 @@ app.post('/ldap-jwt/verify', function (req, res) {
 	}
 });
 
+let userInAuthorizedGroups = function(userGroups, authorized_groups) {
+	if (!Array.isArray(userGroups)) userGroups = [ userGroups ];
+	if (!Array.isArray(authorized_groups)) authorized_groups = [ authorized_groups ];
+	if (settings.debug) console.log({msg: 'Checking groups in userInAuthorizedGroups', userGroups: userGroups, authorized_groups: authorized_groups});
+	return userGroups.some(group => authorized_groups.includes(group));
+}
+
+let userGroupAuthGroupIntersection = function(userGroups, authorized_groups) {
+	if (!Array.isArray(userGroups)) userGroups = [ userGroups ];
+	if (!Array.isArray(authorized_groups)) authorized_groups = [ authorized_groups ];
+	return userGroups.filter(group => authorized_groups.includes(group));
+}
 
 var port = (process.env.PORT || 3000);
 

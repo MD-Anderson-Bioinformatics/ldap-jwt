@@ -92,11 +92,21 @@ env | awk '
         quote["queueTimeout"] = "";
         quote["queueDisable"] = "";
 
+        # Override quote for list/array options.
+        # Example for setting searchAttributes: 
+        # If the following is defined in the container .env file:
+        #    LDAPAUTH_SEARCHATTRIBUTES=["uid","memberOf"]
+        # then the value written to config.json will be
+        #    "searchAttributes": ["uid", "memberOf"]
+        quote["searchAttributes"] = "";
+
         # Set defaults.
         def["timeout"] = "5000";
         def["connectTimeout"] = "10000";
         def["reconnect"] = "true";
         def["searchFilter"] = "(CN={{username}})";
+        def["searchAttributes"] = "[\"uid\", \"mail\", \"displayName\", \"memberOf\"]";
+
     }
     /^LDAPAUTH_/ {
         var=tolower($0); sub(/=.*/,"",var); sub(/ldapauth_/,"",var);
