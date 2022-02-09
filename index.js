@@ -88,7 +88,6 @@ app.post('/authenticate', function (req, res) {
 				if (req.body.authorized_groups != undefined) {
 					if (settings.debug) console.log("authorized_groups specified: " + req.body.authorized_groups);
 					if (!user.hasOwnProperty("memberOf")) {
-						console.log("Groups authorization requested, but server not configured to provide memberOf information");
 						throw "Server not configured for authorized_group verification";
 					}
 					var userGroupsForPayload = userGroupAuthGroupIntersection(user.memberOf, req.body.authorized_groups);
@@ -122,9 +121,9 @@ app.post('/authenticate', function (req, res) {
 				if (err.name === 'InvalidCredentialsError' || (typeof err === 'string' && err.match(/no such user/i)) ) {
 					res.status(401).send({ error: 'Wrong user or password'});
 				} else if (err === "Server not configured for authorized_group verification") {
-					res.status(501).send({ error: "Server not configured for authorized_group verification" });
+					res.status(401).send({ error: "User is not authorized." });
 				} else if (err === "User not in authorized_groups") {
-					res.status(401).send({ error: "User not in authorized_groups" });
+					res.status(401).send({ error: "User is not authorized." });
 				} else {
 					// ldapauth-fork or underlying connections may be in an unusable state.
 					// Reconnect option does re-establish the connections, but will not
