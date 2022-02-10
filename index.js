@@ -221,7 +221,7 @@ if (settings.ssl) {
 		});
 	});
 } else {
-	console.warn("WARNING: Server configured for http (not httpS), and is therefore suitable for development only.");
+	console.warn("WARNING: Server configured for http (not httpS).");
 	var server = http.createServer(app).listen(port,function(){
 		console.log("Express server listenting on port " + port + " using http");
 			app.on("error",(err) => {
