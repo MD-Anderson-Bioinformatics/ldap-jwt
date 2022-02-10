@@ -17,6 +17,10 @@ var fs = require('fs'),
 
 if (settings.ssl) {
 	var https = require('https');
+	if (!fs.existsSync("./ssl/server.key") || !fs.existsSync("./ssl/server.crt")) {
+		console.error("FATAL: missing required SSL certificates. Exiting.");
+		process.exit(1);
+	}
 } else {
 	var http = require('http');
 }
@@ -210,10 +214,6 @@ var port = (process.env.PORT || 3000);
 
 
 if (settings.ssl) {
-	if (!fs.existsSync("./ssl/server.key") || !fs.existsSync("./ssl/server.crt")) {
-		console.error("FATAL: missing required SSL certificates. Exiting.");
-		process.exit(1);
-	}
 	var options = {
 	    key:  fs.readFileSync("./ssl/server.key"),
 	    cert: fs.readFileSync("./ssl/server.crt"),
