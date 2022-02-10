@@ -1,7 +1,10 @@
 var settings = require('./config/config.json');
 
 if (settings.debug) {
-    console.log( 'Settings: ' + JSON.stringify( settings ) );
+  console.log("Node version: "+process.version);
+  var settingsToShow = JSON.parse(JSON.stringify(settings));
+  delete settingsToShow.ldap.bindCredentials;
+  console.log( 'Settings: (bindCredentials not displayed) ' + JSON.stringify( settingsToShow, null, 2 ) );
 }
 
 var bodyParser = require('body-parser');
@@ -9,6 +12,10 @@ var jwt = require('jwt-simple');
 var moment = require('moment');
 var LdapAuth = require('ldapauth-fork');
 var Promise  = require('promise');
+var fs = require('fs'),
+    https = require('https'),
+    express = require('express');
+
 
 app = require('express')();
 
@@ -77,10 +84,10 @@ var authenticate = function (username, password) {
 	});
 };
 
-app.post('/authenticate', function (req, res) {
+app.post('/ldap-jwt/authenticate', function (req, res) {
 	if(auth && req.body.username && req.body.password) {
 		if (settings.debug) {
-                    console.log( 'Request to authenticate ' + req.body.username );
+			console.log( 'Request to authenticate ' + req.body.username );
 		}
 		authenticate(req.body.username, req.body.password)
 			.then(function(user) {
@@ -92,10 +99,10 @@ app.post('/authenticate', function (req, res) {
 					full_name: user.displayName,
 					mail: user.mail
 				}, app.get('jwtTokenSecret'));
-
-		                if (settings.debug) {
-			            console.log( 'Authentication succeeded ' + req.body.username );
-		                }
+				if (settings.debug) {
+					console.log('Authentication succeeded ' + req.body.username );
+					console.log("JWT expiration: " + moment(expires).format("MMMM Do YYYY, h:mm:ss a"));
+				}
 				res.json({token: token, full_name: user.displayName, mail: user.mail});
 			})
 			.catch(function (err) {
@@ -127,8 +134,8 @@ app.post('/authenticate', function (req, res) {
 		}
 });
 
-app.post('/verify', function (req, res) {
-        if (settings.debug) console.log ('> verify');
+app.post('/ldap-jwt/verify', function (req, res) {
+	if (settings.debug) console.log("> verify");
 	var token = req.body.token;
 	if (token && settings.hasOwnProperty( 'jwt' )) {
                 // jwtTokenSecret is defined iff there is a settings.jwt object.
@@ -138,32 +145,40 @@ app.post('/verify', function (req, res) {
 			if (decoded.exp <= Date.now()) {
 				res.status(400).send({ error: 'Access token has expired'});
 				if (settings.debug) {
-                                    console.log ('< verify 400 expired');
-                                    console.log ('Expiry date: ' + new Date(decoded.exp).toLocaleString());
-                                    console.log ('Now: ' + new Date(Date.now()).toLocaleString());
-                                }
+					console.log("< verify 400 expired");
+					console.log("Expiry data: " + new Date(decoded.exp).toLocaleString());
+					console.log("Now: " + new Date(Date.now()).toLocaleString());
+				}
 			} else {
 				res.json(decoded);
-				if (settings.debug) console.log ('< verify succeeded');
+				if (settings.debug){
+					console.log("< verify succeeded");
+					console.log("decoded: "+JSON.stringify(decoded,undefined,10));
+				}
 			}
 		} catch (err) {
 			res.status(500).send({ error: 'Access token could not be decoded'});
-			if (settings.debug) console.log ('< verify 400 cannot decode');
+			if (settings.debug) console.log("< verify 500 cannot decode");
 		}
 	} else {
 		res.status(400).send({ error: 'Access token is missing'});
-		if (settings.debug) console.log ('< verify 400 no token');
+		if (settings.debug) console.log("< verify 500 no token");
 	}
 });
 
 
 var port = (process.env.PORT || 3000);
-app.listen(port, function() {
-	console.log('Listening on port: ' + port);
 
-	if (settings.hasOwnProperty( 'ldap' )) {
-		if (typeof settings.ldap.reconnect === 'undefined' || settings.ldap.reconnect === null || settings.ldap.reconnect === false) {
-			console.warn('WARN: This service may become unresponsive when ldap reconnect is not configured.')
-		}
-	}
+
+var options = {
+    key:  fs.readFileSync("./ssl/server.key"),
+    cert: fs.readFileSync("./ssl/server.crt"),
+};
+var server = https.createServer(options,app).listen(port,function(){
+	console.log("Express server listenting on port " + port);
+		app.on("error",(err) => {
+		console.warn("ERROR: "+err.stack);
+	});
 });
+
+

@@ -6,3 +6,8 @@ node_modules/
 
 ### Project
 config/config.json
+.env
+ssl/*
+
+*.swp
+

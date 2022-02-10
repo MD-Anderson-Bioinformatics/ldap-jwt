@@ -8,5 +8,6 @@ config/config.json
 .gitignore
 .DS_Store
 .dockerignore
+.env
 Dockerfile
 README.md
