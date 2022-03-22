@@ -149,13 +149,19 @@ sed -e "s/CLIENT_ID/${CLIENT_ID}/" \
 HERE
 fi
 
-# Debug
+# If env DEBUG defined, turn on debugging
 if [ "X${DEBUG}" != X ] ; then
 >&2 echo DEBUG is enabled
  echo ' ,
 	"debug": "true"'
 fi
 
+# If env SSL defined, use SSL
+if [ "X${SSL}" != X ] ; then
+>&2 echo Using SSL
+ echo ' ,
+	"ssl": "true"'
+fi
 
 echo "}"
 

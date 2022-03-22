@@ -13,9 +13,17 @@ var moment = require('moment');
 var LdapAuth = require('ldapauth-fork');
 var Promise  = require('promise');
 var fs = require('fs'),
-    https = require('https'),
     express = require('express');
 
+if (settings.ssl) {
+	var https = require('https');
+	if (!fs.existsSync("./ssl/server.key") || !fs.existsSync("./ssl/server.crt")) {
+		console.error("FATAL: missing required SSL certificates. Exiting.");
+		process.exit(1);
+	}
+} else {
+	var http = require('http');
+}
 
 app = require('express')();
 
@@ -205,15 +213,27 @@ let userGroupAuthGroupIntersection = function(userGroups, authorized_groups) {
 var port = (process.env.PORT || 3000);
 
 
-var options = {
-    key:  fs.readFileSync("./ssl/server.key"),
-    cert: fs.readFileSync("./ssl/server.crt"),
-};
-var server = https.createServer(options,app).listen(port,function(){
-	console.log("Express server listenting on port " + port);
-		app.on("error",(err) => {
-		console.warn("ERROR: "+err.stack);
+if (settings.ssl) {
+	var options = {
+	    key:  fs.readFileSync("./ssl/server.key"),
+	    cert: fs.readFileSync("./ssl/server.crt"),
+	};
+	var server = https.createServer(options,app).listen(port,function(){
+		console.log("Express server listenting on port " + port + " using httpS");
+			app.on("error",(err) => {
+			console.warn("ERROR: "+err.stack);
+		});
 	});
-});
+} else {
+	console.warn("WARNING: Server configured for http (not httpS).");
+	var server = http.createServer(app).listen(port,function(){
+		console.log("Express server listenting on port " + port + " using http");
+			app.on("error",(err) => {
+			console.warn("ERROR: "+err.stack);
+		});
+	});
+}
+
+
 
 
