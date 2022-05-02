@@ -51,9 +51,18 @@ $ docker run -p 3000:3000 --rm -it --env-file .env --name ldap-jwt ldap_jwt
 
 #### 5. Manual test
 
+Request with username and password:
+
 ```bash
 $ curl -k -d '{"username":"<username>","password":"<password>"}' -H "Content-Type: application/json" -X POST "https://<hostname>/ldap-jwt/authenticate"
 ```
+
+Request with username and password with authorized group (only allows access if username is in authorized group):
+
+```bash
+$ curl -k -d '{"username":"<username>","password":"<password>","authorized_groups":[<authorized group]}' -H "Content-Type: application/json" -X POST "https://<hostname>/ldap-jwt/authenticate"
+```
+
 
 ## Endpoints
 
