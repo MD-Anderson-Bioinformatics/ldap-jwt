@@ -12,7 +12,7 @@ These tests are configured to allow for self-signed certificates.
 
 Instructions for running tests:
 
-1. Create a file of test usernames, passwords, and authorized groups with entries corresponding to test LDAP server. See example file: `user_env_file`
+1. Create a file of test usernames, passwords, and authorized groups with entries corresponding to test LDAP server. See example file: `user_env_file.example`
 
    Format for file:
 

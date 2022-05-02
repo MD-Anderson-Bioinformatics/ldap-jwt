@@ -3,6 +3,7 @@ import argparse
 import authenticate_utils as au
 from dotenv import dotenv_values
 import json
+from os.path import exists
 import requests
 import sys
 import unittest
@@ -14,8 +15,12 @@ class TestLDAPJWT(unittest.TestCase):
     """Read envs, configure logging.
 
        Enviornment variables of test users, passwords, and authorized groups are read
-       from file. See README, example file "user_env_file", or code below for details.
+       from file. See README, example file "user_env_file.example", or code below for details.
     """
+    if self.user_env_file == None:
+       sys.exit("Missing required argument: user_env_file")
+    if not exists(self.user_env_file):
+       sys.exit("File '"+self.user_env_file+"' does not exist")
     self.test_envs = dotenv_values(self.user_env_file)
     au.init_logging(self.log_level)
 
@@ -126,8 +131,7 @@ if __name__ == '__main__':
        help="Hostname and port of LDAP-JWT server. Default: https://localhost:3000/ldap-jwt",
        default="https://localhost:3000/ldap-jwt")
   parser.add_argument("-f", "--user_env_file", dest="user_env_file", action="store",
-       help="Filename of test usernames, passwords, and groups. See README or code for details. Default: user_env_file",
-       default="user_env_file")
+       help="Filename of test usernames, passwords, and groups. See user_env_file.example or README for details.")
   parser.add_argument("-l", "--log_level", dest="log_level", action="store", 
        help="Log level for unit tests. Default: INFO", default="INFO")
   args = parser.parse_args()
