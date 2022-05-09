@@ -208,3 +208,5 @@ In this example, the JWT payload contains an encoded authorized\_groups key with
   "user_name": <username>
 }
 ```
+
+In the response, the user\_authorized\_groups list is the intersection of the "authorized_groups" in the original request made to generate the token and the user's groups in LDAP.
