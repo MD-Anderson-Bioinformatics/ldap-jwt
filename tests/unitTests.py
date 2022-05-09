@@ -28,27 +28,27 @@ class TestLDAPJWT(unittest.TestCase):
     """Test username/password access for valid user with valid password."""
     username = self.test_envs["VALID_USERNAME_A"]
     password = self.test_envs["VALID_USER_PASSWORD_A"]
-    authenticate_status, token = au.authenticate(username, password, None, self.host)
+    authenticate_status, token = au.authenticate(username, password, None, self.url)
     self.assertNotEqual(token, None)
-    verify_status = au.verify(token, None, self.host)
+    verify_status = au.verify(token, None, self.url)
     self.assertEqual(verify_status, 200)
 
   def test02(self):
     """Test username/password fails for valid user with wrong password."""
     username = self.test_envs["VALID_USERNAME_A"]
     password = "notCorrectPassword"
-    authenticate_status, token = au.authenticate(username, password, None, self.host)
+    authenticate_status, token = au.authenticate(username, password, None, self.url)
     self.assertEqual(token, None)
-    verify_status = au.verify(token, None, self.host)
+    verify_status = au.verify(token, None, self.url)
     self.assertEqual(verify_status, 400)
 
   def test03(self):
     """Test username/password access fails for non-valid user."""
     username = self.test_envs["INVALID_USERNAME"]
     password = self.test_envs["INVALID_USER_PASSWORD"]
-    authenticate_status, token = au.authenticate(username, password, None, self.host)
+    authenticate_status, token = au.authenticate(username, password, None, self.url)
     self.assertEqual(token, None)
-    verify_status = au.verify(token, None, self.host)
+    verify_status = au.verify(token, None, self.url)
     self.assertEqual(verify_status, 400)
 
   def test04(self):
@@ -56,9 +56,9 @@ class TestLDAPJWT(unittest.TestCase):
     username = self.test_envs["VALID_USERNAME_A"]
     password = self.test_envs["VALID_USER_PASSWORD_A"]
     a_groups = [self.test_envs["AUTHORIZED_GROUP_A"]]
-    authenticate_status, token = au.authenticate(username, password, a_groups, self.host)
+    authenticate_status, token = au.authenticate(username, password, a_groups, self.url)
     self.assertNotEqual(token, None)
-    verify_status = au.verify(token, a_groups, self.host)
+    verify_status = au.verify(token, a_groups, self.url)
     self.assertEqual(verify_status, 200)
 
   def test05(self):
@@ -69,9 +69,9 @@ class TestLDAPJWT(unittest.TestCase):
     username = self.test_envs["VALID_USERNAME_A"]
     password = self.test_envs["VALID_USER_PASSWORD_A"]
     a_groups = [self.test_envs["AUTHORIZED_GROUP_A"], self.test_envs["AUTHORIZED_GROUP_B"]]
-    authenticate_status, token = au.authenticate(username, password, a_groups, self.host)
+    authenticate_status, token = au.authenticate(username, password, a_groups, self.url)
     self.assertNotEqual(token, None)
-    verify_status = au.verify(token, a_groups, self.host)
+    verify_status = au.verify(token, a_groups, self.url)
     self.assertEqual(verify_status, 200)
 
   def test06(self):
@@ -82,9 +82,9 @@ class TestLDAPJWT(unittest.TestCase):
     username = self.test_envs["VALID_USERNAME_A"]
     password = self.test_envs["VALID_USER_PASSWORD_A"]
     a_groups = self.test_envs["AUTHORIZED_GROUP_A"]
-    authenticate_status, token = au.authenticate(username, password, a_groups, self.host)
+    authenticate_status, token = au.authenticate(username, password, a_groups, self.url)
     self.assertNotEqual(token, None)
-    verify_status = au.verify(token, a_groups, self.host)
+    verify_status = au.verify(token, a_groups, self.url)
     self.assertEqual(verify_status, 200)
 
   def test07(self):
@@ -92,7 +92,7 @@ class TestLDAPJWT(unittest.TestCase):
     username = self.test_envs["VALID_USERNAME_A"]
     password = self.test_envs["VALID_USER_PASSWORD_A"]
     a_groups = [self.test_envs["AUTHORIZED_GROUP_B"]]
-    authenticate_status, token = au.authenticate(username, password, a_groups, self.host)
+    authenticate_status, token = au.authenticate(username, password, a_groups, self.url)
     self.assertEqual(authenticate_status, 401)
 
   def test08(self):
@@ -104,10 +104,10 @@ class TestLDAPJWT(unittest.TestCase):
     username = self.test_envs["VALID_USERNAME_A"]
     password = self.test_envs["VALID_USER_PASSWORD_A"]
     a_groups = [self.test_envs["AUTHORIZED_GROUP_A"]]
-    authenticate_stauts, token = au.authenticate(username, password, a_groups, self.host)
+    authenticate_stauts, token = au.authenticate(username, password, a_groups, self.url)
     self.assertNotEqual(token, None)
     a_groups = [self.test_envs["AUTHORIZED_GROUP_B"]]
-    verify_status = au.verify(token, a_groups, self.host)
+    verify_status = au.verify(token, a_groups, self.url)
     self.assertEqual(verify_status, 401)
 
   def test09(self):
@@ -118,16 +118,16 @@ class TestLDAPJWT(unittest.TestCase):
     """
     username = self.test_envs["VALID_USERNAME_A"]
     password = self.test_envs["VALID_USER_PASSWORD_A"]
-    authenticate_stauts, token = au.authenticate(username, password, None, self.host)
+    authenticate_stauts, token = au.authenticate(username, password, None, self.url)
     self.assertNotEqual(token, None)
     a_groups = [self.test_envs["AUTHORIZED_GROUP_A"]]
-    verify_status = au.verify(token, a_groups, self.host)
+    verify_status = au.verify(token, a_groups, self.url)
     self.assertEqual(verify_status, 401)
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description="Testing LDAP-JWT server", add_help=False)
-  parser.add_argument("--help", action="help", default=argparse.SUPPRESS, help=argparse._("Show this help message and exit."))
-  parser.add_argument("-h", "--host", dest="host", action="store", 
+  parser.add_argument("-h", "--help", action="help", default=argparse.SUPPRESS, help=argparse._("Show this help message and exit."))
+  parser.add_argument("-u", "--url", dest="url", action="store", 
        help="Hostname and port of LDAP-JWT server. Default: https://localhost:3000/ldap-jwt",
        default="https://localhost:3000/ldap-jwt")
   parser.add_argument("-f", "--user_env_file", dest="user_env_file", action="store",
