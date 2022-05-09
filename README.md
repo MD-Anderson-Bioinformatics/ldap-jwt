@@ -83,7 +83,7 @@ TODO: write these tests in node (instead of python)
 
 #### No authorozed\_groups
 
-This example returns a token if <username> is any user in LDAP (and of course has the correct password).
+This example returns a token if \<username\> is any user in LDAP (and of course has the correct password).
 
 *Body of POST request:*
 
@@ -107,16 +107,18 @@ This example returns a token if <username> is any user in LDAP (and of course ha
 *Payload of JWT:*
 
 ```
+{
   "aud": <CLIENT_ID from .env file>,
   "exp": <expiration date>,
   "full_name": <user's full name>,
   "mail": <user's email address>,
   "user_name": <username>
+}
 ```
 
 #### w/ authorized_groups
 
-This example returns a token if <username> is in LDAP and is a member of either <LDAP group1> or <LDAP group2> (and of course has the correct password).
+This example returns a token if \<username\> is in LDAP and is a member of either \<LDAP group1\> or \<LDAP group2\> (and of course has the correct password).
 
 *Body of POST request:*
 
@@ -128,7 +130,7 @@ This example returns a token if <username> is in LDAP and is a member of either 
 }
 ```
 
-Note: requests that incorporate authorized\_groups should only be made from the server side of an application. This practice 1) protects potentially sensitive LDAP group information and 2) prevents malicious users from substituting groups they belong to and potentially gaining unauthorized application access.
+Note: requests that incorporate authorized\_groups should only be made from the server side of an application. This practice 1) protects potentially sensitive LDAP group information and 2) prevents malicious users potentially gaining unauthorized access by substituting groups to which they belong.
 
 *Response:*
 
@@ -143,12 +145,14 @@ Note: requests that incorporate authorized\_groups should only be made from the 
 *Payload of JWT:*
 
 ```
+{
   "aud": <CLIENT_ID from .env file>,
   "exp": <expiration date>,
   "full_name": <user's full name>,
   "mail": <user's email address>,
   "user_authorized_groups": [ <LDAP group1>, <LDAP groupA> ],
   "user_name": <username>
+}  
 ```
 
 In the JWT payload, the user\_authorized\_groups list is the intersection of the "authorized_groups" in the initial request and the user's groups in LDAP.
