@@ -11,6 +11,7 @@ Heavily based on the work of [gregfroese/ldapservice](https://github.com/gregfro
 * Updated npm dependencies
 * Simplified endpoints
 * Added option to use SSL (httpS) 
+* Added option to specify authorized groups
 
 
 ## Usage
@@ -49,7 +50,7 @@ $ docker build -t ldap_jwt .
 $ docker run -p 3000:3000 --rm -it --env-file .env --name ldap-jwt ldap_jwt
 ```
 
-#### 5. Manual test
+#### 5. Verify server is running
 
 Request with username and password:
 
@@ -63,50 +64,143 @@ Request with username and password with authorized group (only allows access if 
 $ curl -k -d '{"username":"<username>","password":"<password>","authorized_groups":[<authorized group]}' -H "Content-Type: application/json" -X POST "https://<hostname>/ldap-jwt/authenticate"
 ```
 
+#### 5. Run tests
+
+The README in the tests directory describes the setup and procedure for running tests. 
+
+For quick help:
+
+```bash
+cd tests
+python3 unitTests.py --help
+```
+
+TODO: write these tests in node (instead of python)
 
 ## Endpoints
 
 ### /ldap-jwt/authenticate
 
-**Payload**
+#### No authorozed\_groups
+
+This example returns a token if <username> is any user in LDAP (and of course has the correct password).
+
+*Body of POST request:*
 
 ```json
 {
-    "username": "euler",
-    "password": "password"
+    "username": <username>,
+    "password": <password>
 }
 ```
 
-**Response**
+*Response:*
 
 ```json
 {
-  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE0NjE3OTQxMjY0NjAsInVzZXJfbmFtZSI6ImV1bGVyIiwiZnVsbF9uYW1lIjoiTGVvbmhhcmQgRXVsZXIiLCJtYWlsIjoiZXVsZXJAbGRhcC5mb3J1bXN5cy5jb20ifQ.bqSjshvLnHsTJwcXBXsNVtGGNatvQHyqhL8MSXuMwFI",
-  "full_name": "Leonhard Euler"
+  "full_name": <user's full name>,
+  "mail": <user's email address>,
+  "token": <JWT>
 }
 ```
 
-### /ldap-jwt/verify
+*Payload of JWT:*
 
-**Payload**
+```json
+  "aud": <CLIENT_ID from .env file>,
+  "exp": <expiration date>,
+  "full_name": <user's full name>,
+  "mail": <user's email address>,
+  "user_name": <username>
+```
+
+#### w/ authorized_groups
+
+This example returns a token if <username> is in LDAP and is a member of either <LDAP group1> or <LDAP group2> (and of course has the correct password).
+
+*Body of POST request:*
 
 ```json
 {
-  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE0NjE3OTQxMjY0NjAsInVzZXJfbmFtZSI6ImV1bGVyIiwiZnVsbF9uYW1lIjoiTGVvbmhhcmQgRXVsZXIiLCJtYWlsIjoiZXVsZXJAbGRhcC5mb3J1bXN5cy5jb20ifQ.bqSjshvLnHsTJwcXBXsNVtGGNatvQHyqhL8MSXuMwFI"
+    "username": <username>,
+    "password": <password>,
+    "authorized_groups": [ <LDAP group1>, <LDAP group2> ]
 }
 ```
 
-**Response**
+Note: requests that incorporate authorized\_groups should only be made from the server side of an application. This practice 1) protects potentially sensitive LDAP group information and 2) prevents malicious users from substituting groups they belong to and potentially gaining unauthorized application access.
+
+*Response:*
 
 ```json
 {
-  "exp": 1495058246,
-  "user_name": "euler",
-  "full_name": "Leonhard Euler",
-  "mail": "euler@ldap.forumsys.com"
+  "full_name": <user's full name>,
+  "mail": <user's email address>,
+  "token": <JWT>
 }
 ```
 
-## ToDo
+*Payload of JWT:*
 
-* Write Tests
+```json
+  "aud": <CLIENT_ID from .env file>,
+  "exp": <expiration date>,
+  "full_name": <user's full name>,
+  "mail": <user's email address>,
+  "user_authorized_groups": [ <LDAP group1>, <LDAP groupA> ],
+  "user_name": <username>
+```
+
+In the JWT payload, the user\_authorized\_groups list is the intersection of the "authorized_groups" in the initial request and the user's groups in LDAP.
+
+
+### /ldap-jwt/verify 
+
+#### w/o authorized groups in token
+
+In this example, the JWT payload does NOT contain an encoded authorized\_groups key.
+
+*Body of POST request:*
+
+```json
+{
+  "token": <JWT>
+}
+```
+
+*Response:*
+
+```json
+{
+  "aud": <CLIENT_ID from .env file>,
+  "exp": <expiration date>,
+  "full_name": <user's full name>,
+  "mail": <user's email address>,
+  "user_name": <username>
+}
+```
+
+#### w/ authorized groups in token
+
+In this example, the JWT payload contains an encoded authorized\_groups key with values [ \<LDAP group1\>, \<LDAP groupA\> ].
+
+*Body of POST request:*
+
+```json
+{
+  "token": <JWT>
+}
+```
+
+*Response:*
+
+```json
+{
+  "aud": <CLIENT_ID from .env file>,
+  "exp": <expiration date>,
+  "full_name": <user's full name>,
+  "mail": <user's email address>,
+  "user_authorized_groups": [ <LDAP group1>, <LDAP groupA> ],
+  "user_name": <username>
+}
+```
