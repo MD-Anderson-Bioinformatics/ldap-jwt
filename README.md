@@ -64,7 +64,7 @@ Request with username and password with authorized group (only allows access if 
 $ curl -k -d '{"username":"<username>","password":"<password>","authorized_groups":[<authorized group]}' -H "Content-Type: application/json" -X POST "https://<hostname>/ldap-jwt/authenticate"
 ```
 
-#### 5. Run tests
+#### 6. Run tests
 
 The README in the tests directory describes the setup and procedure for running tests. 
 
@@ -87,7 +87,7 @@ This example returns a token if <username> is any user in LDAP (and of course ha
 
 *Body of POST request:*
 
-```json
+```
 {
     "username": <username>,
     "password": <password>
@@ -96,7 +96,7 @@ This example returns a token if <username> is any user in LDAP (and of course ha
 
 *Response:*
 
-```json
+```
 {
   "full_name": <user's full name>,
   "mail": <user's email address>,
@@ -106,7 +106,7 @@ This example returns a token if <username> is any user in LDAP (and of course ha
 
 *Payload of JWT:*
 
-```json
+```
   "aud": <CLIENT_ID from .env file>,
   "exp": <expiration date>,
   "full_name": <user's full name>,
@@ -120,7 +120,7 @@ This example returns a token if <username> is in LDAP and is a member of either 
 
 *Body of POST request:*
 
-```json
+```
 {
     "username": <username>,
     "password": <password>,
@@ -132,7 +132,7 @@ Note: requests that incorporate authorized\_groups should only be made from the 
 
 *Response:*
 
-```json
+```
 {
   "full_name": <user's full name>,
   "mail": <user's email address>,
@@ -142,7 +142,7 @@ Note: requests that incorporate authorized\_groups should only be made from the 
 
 *Payload of JWT:*
 
-```json
+```
   "aud": <CLIENT_ID from .env file>,
   "exp": <expiration date>,
   "full_name": <user's full name>,
@@ -162,7 +162,7 @@ In this example, the JWT payload does NOT contain an encoded authorized\_groups 
 
 *Body of POST request:*
 
-```json
+```
 {
   "token": <JWT>
 }
@@ -170,7 +170,7 @@ In this example, the JWT payload does NOT contain an encoded authorized\_groups 
 
 *Response:*
 
-```json
+```
 {
   "aud": <CLIENT_ID from .env file>,
   "exp": <expiration date>,
@@ -186,7 +186,7 @@ In this example, the JWT payload contains an encoded authorized\_groups key with
 
 *Body of POST request:*
 
-```json
+```
 {
   "token": <JWT>
 }
@@ -194,7 +194,7 @@ In this example, the JWT payload contains an encoded authorized\_groups key with
 
 *Response:*
 
-```json
+```
 {
   "aud": <CLIENT_ID from .env file>,
   "exp": <expiration date>,
