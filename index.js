@@ -1,11 +1,9 @@
 var settings = require('./config/config.json');
+const logger = require('./logger');
+const ut = require('./utils');
 
-if (settings.debug) {
-  console.log("Node version: "+process.version);
-  var settingsToShow = JSON.parse(JSON.stringify(settings));
-  delete settingsToShow.ldap.bindCredentials;
-  console.log( 'Settings: (bindCredentials not displayed) ' + JSON.stringify( settingsToShow, null, 2 ) );
-}
+logger.debug("Node version: "+process.version);
+logger.debug("Settings: " + JSON.stringify(settings, ut.hideSecrets, 2));
 
 var bodyParser = require('body-parser');
 var jwt = require('jwt-simple');
@@ -18,7 +16,7 @@ var fs = require('fs'),
 if (settings.ssl) {
 	var https = require('https');
 	if (!fs.existsSync("./ssl/server.key") || !fs.existsSync("./ssl/server.crt")) {
-		console.error("FATAL: missing required SSL certificates. Exiting.");
+		logger.error("Missing required SSL certificates. Exiting.");
 		process.exit(1);
 	}
 } else {
@@ -27,61 +25,36 @@ if (settings.ssl) {
 
 app = require('express')();
 
-if (settings.debug) {
-    app.use( function (err, req, res, next) {
-        console.log( 'Got error on request: ' + JSON.stringify( req.originalUrl ) );
-        console.log( '    error: ' + JSON.stringify( err ) );
-        next();
-    });
-
-    app.use( function (req, res, next) {
-        console.log( 'Got request: ' + req.method + ' ' + req.originalUrl );
-        next();
-    });
-}
-
-
 app.use(bodyParser.json());
-
-if (settings.debug) {
-    app.use( function (req, res, next) {
-        console.log( 'After bodyParser.json()' );
-        //console.log( '  body: ' + JSON.stringify( req.body ) ); <-- this can print passwords to log
-        next();
-    });
-    app.use( function (err, req, res, next) {
-        console.log( 'Error after bodyParser.json(): ' + JSON.stringify( err ) );
-        next();
-    });
-}
-
-
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(require('cors')());
 
 var auth = null;
-if (settings.hasOwnProperty( 'ldap' ) && settings.hasOwnProperty( 'jwt' )) auth = new LdapAuth(settings.ldap);
+if (settings.hasOwnProperty( 'ldap' ) && settings.hasOwnProperty( 'jwt' )) {
+	auth = new LdapAuth(settings.ldap);
+	logger.debug("LdapAuth settings: " + JSON.stringify(settings.ldap, ut.hideSecrets, 2));
+}
 
 if (settings.hasOwnProperty( 'jwt' )) {
     if (!settings.jwt.hasOwnProperty('timeout')) {
-        console.log ('Settings.jwt.timeout not set - using default');
         settings.jwt.timeout = 1;
+        logger.warn("Settings.jwt.timeout not set - using default: " + settings.jwt.timeout);
     }
     if (!settings.jwt.hasOwnProperty('timeout_units')) {
-        console.log ('Settings.jwt.timeout_units not set - using default');
         settings.jwt.timeout_units = 'hour';
+        logger.warn("Settings.jwt.timeout_units not set - using default: " + settings.jwt.timeout_units);
     }
-    console.log('JWT tokens will expire after ' + settings.jwt.timeout + ' ' + settings.jwt.timeout_units);
+    logger.info('JWT tokens will expire after ' + settings.jwt.timeout + ' ' + settings.jwt.timeout_units);
     app.set('jwtTokenSecret',
             settings.jwt.base64 ? new Buffer(settings.jwt.secret, 'base64') : settings.jwt.secret);
 }
 
 var authenticate = function (username, password) {
+	logger.debug("Authenticating user: " + username);
 	return new Promise(function (resolve, reject) {
+		logger.debug("In authenticate promise");
 		auth.authenticate(username, password, function (err, user) {
-                        if (settings.debug) {
-                            console.log( 'In authenticate callback' );
-                        }
+			logger.debug("In auth.authenticate callback");
 			if(err)
 				reject(err);
 			else if (!user)
@@ -94,14 +67,12 @@ var authenticate = function (username, password) {
 
 app.post('/ldap-jwt/authenticate', function (req, res) {
 	if(auth && req.body.username && req.body.password) {
-		if (settings.debug) {
-			console.log( 'Request to authenticate ' + req.body.username );
-		}
+		logger.debug(JSON.stringify(req.body, ut.hideSecrets, 2));
 		authenticate(req.body.username, req.body.password, req.body.authorized_groups)
 			.then(function(user) {
-				if (settings.debug) console.log({user: user});
+				logger.debug("User authenticated");
 				if (req.body.authorized_groups != undefined) {
-					if (settings.debug) console.log("authorized_groups specified: " + req.body.authorized_groups);
+					logger.debug("authorized_groups specified: " + req.body.authorized_groups);
 					if (!user.hasOwnProperty("memberOf")) {
 						throw "Server not configured for authorized_group verification";
 					}
@@ -109,7 +80,7 @@ app.post('/ldap-jwt/authenticate', function (req, res) {
 					if (!userInAuthorizedGroups(user.memberOf, req.body.authorized_groups)) {
 						throw "User not in authorized_groups";
 					}
-					if (settings.debug) console.log({userGroupsForPayload: userGroupsForPayload});
+					logger.debug("userGroupsForPayload: " + userGroupsForPayload);
 				}
 				var expires = moment().add(settings.jwt.timeout, settings.jwt.timeout_units).valueOf();
 				var token = jwt.encode({
@@ -120,18 +91,15 @@ app.post('/ldap-jwt/authenticate', function (req, res) {
 					mail: user.mail,
 					user_authorized_groups: userGroupsForPayload
 				}, app.get('jwtTokenSecret'));
-				if (settings.debug) {
-					console.log('Authentication succeeded for ' + req.body.username );
-					console.log("JWT expiration: " + moment(expires).format("MMMM Do YYYY, h:mm:ss a"));
-				}
+				logger.info("Authentication success for " + req.body.username +
+					" JWT expires: " + moment(expires).format("MMMM Do YYYY, h:mm:ss a"));
 				res.json({token: token, full_name: user.displayName, mail: user.mail});
 			})
 			.catch(function (err) {
 				// Ldap reconnect config needs to be set to true to reliably
 				// land in this catch when the connection to the ldap server goes away.
 				// REF: https://github.com/vesse/node-ldapauth-fork/issues/23#issuecomment-154487871
-
-				console.log(err);
+				logger.error(err);
 
 				if (err.name === 'InvalidCredentialsError' || (typeof err === 'string' && err.match(/no such user/i)) ) {
 					res.status(401).send({ error: 'Wrong user or password'});
@@ -150,57 +118,50 @@ app.post('/ldap-jwt/authenticate', function (req, res) {
 
 			});
 		} else {
-		        if (settings.debug) {
-			    console.log( 'No username or password supplied' );
-		        }
+			logger.error("No username or password supplied");
 			res.status(400).send({error: 'No username or password supplied'});
 		}
 });
 
 app.post('/ldap-jwt/verify', function (req, res) {
-	if (settings.debug) console.log("> verify");
+	logger.debug("verify endpoint: " + JSON.stringify(req.body, ut.hideSecrets, 2));
 	var token = req.body.token;
 	if (token && settings.hasOwnProperty( 'jwt' )) {
-                // jwtTokenSecret is defined iff there is a settings.jwt object.
+		// jwtTokenSecret is defined iff there is a settings.jwt object.
 		try {
 			var decoded = jwt.decode(token, app.get('jwtTokenSecret'));
-
 			if (decoded.exp <= Date.now()) {
 				res.status(400).send({ error: 'Access token has expired'});
-				if (settings.debug) {
-					console.log("< verify 400 expired");
-					console.log("Expiry data: " + new Date(decoded.exp).toLocaleString());
-					console.log("Now: " + new Date(Date.now()).toLocaleString());
-				}
+				logger.debug("verify 400 expired");
+				logger.debug("Expiry data: " + new Date(decoded.exp).toLocaleString());
+				logger.debug("Current time: " + new Date(Date.now()).toLocaleString());
 			} else if (req.body.authorized_groups != undefined) {
 				if (decoded.hasOwnProperty("user_authorized_groups") && userInAuthorizedGroups(decoded.user_authorized_groups, req.body.authorized_groups)) {
 					res.json(decoded);
-					if (settings.debug) console.log('< verify succeeded for user in authorized_groups');
+					logger.info("Verification success for " + JSON.stringify(req.body, ut.hideSecrets, 10));
 				} else {
 					res.status(401).send({error: 'Token not authorized for specified groups'});
-					if (settings.debug) console.error('< verify failed; user not in authorized_groups');
+					logger.error("verify failed; user not in authorized_groups");
 				}
 			} else {
 				res.json(decoded);
-				if (settings.debug){
-					console.log("< verify succeeded");
-					console.log("decoded: "+JSON.stringify(decoded,undefined,10));
-				}
+				logger.debug("decoded: "+JSON.stringify(decoded, ut.hideSecrets, 10));
 			}
 		} catch (err) {
 			res.status(500).send({ error: 'Access token could not be decoded'});
-			if (settings.debug) console.log("< verify 500 cannot decode");
+			logger.error("verify failed; cannot decode token");
 		}
 	} else {
 		res.status(400).send({ error: 'Access token is missing'});
-		if (settings.debug) console.log("< verify 500 no token");
+		logger.debug("verify failed; no token");
 	}
 });
 
 let userInAuthorizedGroups = function(userGroups, authorized_groups) {
 	if (!Array.isArray(userGroups)) userGroups = [ userGroups ];
 	if (!Array.isArray(authorized_groups)) authorized_groups = [ authorized_groups ];
-	if (settings.debug) console.log({msg: 'Checking groups in userInAuthorizedGroups', userGroups: userGroups, authorized_groups: authorized_groups});
+	logger.debug("userGroups: " + userGroups);
+	logger.debug("authorized_groups: " + authorized_groups);
 	return userGroups.some(group => authorized_groups.includes(group));
 }
 
@@ -219,17 +180,17 @@ if (settings.ssl) {
 	    cert: fs.readFileSync("./ssl/server.crt"),
 	};
 	var server = https.createServer(options,app).listen(port,function(){
-		console.log("Express server listenting on port " + port + " using httpS");
+		logger.info("Express server listenting on port " + port + " using httpS");
 			app.on("error",(err) => {
-			console.warn("ERROR: "+err.stack);
+			logger.error("ERROR: " + err.stack);
 		});
 	});
 } else {
-	console.warn("WARNING: Server configured for http (not httpS).");
+	logger.warn("Server configured for http (not httpS).");
 	var server = http.createServer(app).listen(port,function(){
-		console.log("Express server listenting on port " + port + " using http");
-			app.on("error",(err) => {
-			console.warn("ERROR: "+err.stack);
+		logger.info("Express server listenting on port " + port + " using http");
+		app.on("error",(err) => {
+			logger.error("ERROR: " + err.stack);
 		});
 	});
 }
