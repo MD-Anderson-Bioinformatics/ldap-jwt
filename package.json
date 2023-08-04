@@ -14,12 +14,12 @@
   "author": "Lucian Weber <lucian@weber.xyz>",
   "license": "MIT",
   "dependencies": {
-    "body-parser": "1.17.1",
+    "body-parser": "^1.20.2",
     "cors": "2.8.3",
-    "express": "4.15.2",
-    "jwt-simple": "0.5.1",
-    "ldapauth-fork": "3.0.1",
-    "moment": "2.18.1",
+    "express": "^4.18.2",
+    "jwt-simple": "^0.5.6",
+    "ldapauth-fork": "^5.0.5",
+    "moment": "^2.29.4",
     "promise": "^7.1.1",
     "winston": "^3.10.0"
   }
