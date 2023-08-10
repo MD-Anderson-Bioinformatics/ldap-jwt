@@ -1,21 +1,11 @@
-const winston = require('winston');
+const bunyan = require('bunyan');
+const bformat = require('bunyan-format');
+const formatOut = bformat({ outputMode: 'short', color: true });
 
-/*
-  This is a very rough interface to the winston logging package.
-  There are many opportunities for improvement.
-*/
-
-const logger = winston.createLogger({
-  level: (process.env.LOG_LEVEL || 'info'),
-  format: winston.format.combine(
-    winston.format.colorize(),
-    winston.format.json(),
-    winston.format.timestamp({format: 'DD-MMM-YYYY HH:mm:ss'}),
-    winston.format.printf(info => `${info.timestamp} ${info.level}: ${info.message}`),
-  ),
-  transports: [
-    new winston.transports.Console(),
-  ],
+const logger = bunyan.createLogger({ // also used for logging in ldapauth-fork and ldapjs
+	name: 'ldap-jwt',
+	level: (process.env.LOG_LEVEL || 'info'),
+	stream: formatOut
 });
 
 module.exports = logger;
