@@ -4,7 +4,7 @@
   "description": "Lightweight node.js based web service that provides user authentication against LDAP server (Active Directory / Windows network) credentials and returns a JSON Web Token.",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
+    "start": "node index.js | ./node_modules/.bin/bunyan -o short",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -15,6 +15,8 @@
   "license": "MIT",
   "dependencies": {
     "body-parser": "^1.20.2",
+    "bunyan": "^1.8.15",
+    "bunyan-format": "^0.2.1",
     "cors": "2.8.3",
     "express": "^4.18.2",
     "jwt-simple": "^0.5.6",

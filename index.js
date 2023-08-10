@@ -1,9 +1,18 @@
 var settings = require('./config/config.json');
 const logger = require('./logger');
 const ut = require('./utils');
+const bunyan = require('bunyan');
+const bformat = require('bunyan-format');
+const formatOut = bformat({ outputMode: 'short', color: true });
 
 logger.debug("Node version: "+process.version);
 logger.debug("Settings: " + JSON.stringify(settings, ut.hideSecrets, 2));
+
+var bunyan_log = bunyan.createLogger({ // for logging in ldapauth-fork and ldapjs
+	name: 'ldap-jwt',
+	level: 'trace',
+	stream: formatOut
+});
 
 var bodyParser = require('body-parser');
 var jwt = require('jwt-simple');
@@ -31,8 +40,10 @@ app.use(require('cors')());
 
 var auth = null;
 if (settings.hasOwnProperty( 'ldap' ) && settings.hasOwnProperty( 'jwt' )) {
-	auth = new LdapAuth(settings.ldap);
 	logger.debug("LdapAuth settings: " + JSON.stringify(settings.ldap, ut.hideSecrets, 2));
+	logger.debug("Adding bunyan logger to LdapAuth settings");
+	settings.ldap['log'] = bunyan_log;
+	auth = new LdapAuth(settings.ldap);
 }
 
 if (settings.hasOwnProperty( 'jwt' )) {
