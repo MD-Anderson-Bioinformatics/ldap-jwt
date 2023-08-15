@@ -8,7 +8,9 @@ There is an additional file of environment variables described in step 1 below.
 
 These tests are configured to allow for self-signed certificates.
 
-# Usage
+A requriements.txt file is provided to allow using a python virtual environment to run tests.
+
+## Usage
 
 Instructions for running tests:
 
@@ -32,10 +34,20 @@ Instructions for running tests:
    INVALID_USER_PASSWORD=invalidPassword
    ```
 
-2. Run unit tests
+2. Create python virtual environment
+
+   These are typical instructions for creating a virutal environment.
 
    ```bash
-   python3 unitTests.py
+   python3 -m venv .env
+   source .env/bin/activate
+   pip install -r requirements.txt
+   ```
+
+3. Run unit tests
+
+   ```bash
+   python3 unitTests.py -u http://<servername>:<port>/ldap-jwt -f <user_env_file> -l <log level>
    ```
 
    For help info:
@@ -43,5 +55,10 @@ Instructions for running tests:
    ```bash
    python3 unitTests.py --help
    ```
-   
-   
+
+4. Deactivate virtual environment
+
+   ```bash
+   deactivate
+   ```
+
