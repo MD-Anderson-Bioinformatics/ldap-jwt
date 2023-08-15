@@ -83,10 +83,10 @@ var authenticate = function (username, password) {
 		auth.authenticate(username, password, function (err, user) {
 			unbind(auth);
 			if(err) {
-				logger.error("Reject because of err: ", err);
+				logger.debug("ERROR: Reject because of err: ", err);
 				reject(err);
 			} else if (!user) {
-				logger.error("Reject because no user");
+				logger.debug("ERROR: Reject because no user");
 				reject();
 			} else {
 				resolve(user);
@@ -121,20 +121,27 @@ app.post('/ldap-jwt/authenticate', function (req, res) {
 					mail: user.mail,
 					user_authorized_groups: userGroupsForPayload
 				}, app.get('jwtTokenSecret'));
-				logger.info("Authentication success for " + req.body.username +
-					" JWT expires: " + moment(expires).format("MMMM Do YYYY, h:mm:ss a"));
+				if (req.body.authorized_groups != undefined) {
+					logger.info("Token generated for '" + req.body.username + "' with groups '" + userGroupsForPayload.join("; ") + "'." +
+						" JWT expires: " + moment(expires).format("MMMM Do YYYY, h:mm:ss a"));
+				} else {
+					logger.info("Token generated for '" + req.body.username + "'." +
+						" JWT expires: " + moment(expires).format("MMMM Do YYYY, h:mm:ss a"));
+				}
 				res.json({token: token, full_name: user.displayName, mail: user.mail});
 			})
 			.catch(function (err) {
-				// Ldap reconnect config needs to be set to true to reliably
-				// land in this catch when the connection to the ldap server goes away.
-				// REF: https://github.com/vesse/node-ldapauth-fork/issues/23#issuecomment-154487871
-				logger.error("Error from authenticate promise: ", err);
 				if (err.name === 'InvalidCredentialsError' || (typeof err === 'string' && err.match(/no such user/i)) ) {
-					res.status(401).send({ error: 'Wrong user or password'});
-				} else if (err == "Server not configured for authorized_group verification" || err == "User not in authorized_groups") {
+					logger.error("Token generation failed: InvalidCredentialsError for '" + req.body.username + "'");
+					res.status(401).send({ error: 'Wrong username or password'});
+				} else if (err == "Server not configured for authorized_group verification") {
+					logger.error("Server not configured for authorized_group verification");
+					res.status(401).send({error: "User is not authorized"});
+				} else if (err == "User not in authorized_groups") {
+					logger.error("Token generation failed: user '" + req.body.username + "' not in '" + req.body.authorized_groups + "'");
 					res.status(401).send({error: "User is not authorized"});
 				} else {
+					logger.error("Error from authenticate promise: ", err);
 					res.status(500).send({ error: 'Unexpected Error. Please try again.'});
 				}
 			});
@@ -156,25 +163,28 @@ app.post('/ldap-jwt/verify', function (req, res) {
 				logger.debug("verify 400 expired");
 				logger.debug("Expiry data: " + new Date(decoded.exp).toLocaleString());
 				logger.debug("Current time: " + new Date(Date.now()).toLocaleString());
+				logger.info("Verification failed: expired token for '" + decoded.user_name + "'");
 			} else if (req.body.authorized_groups != undefined) {
 				if (decoded.hasOwnProperty("user_authorized_groups") && userInAuthorizedGroups(decoded.user_authorized_groups, req.body.authorized_groups)) {
 					res.json(decoded);
-					logger.info("Verification success for " + JSON.stringify(req.body, ut.hideSecrets, 10));
+					logger.info("Verification success for '" + decoded.user_name + "', " +
+						"requested groups: '" + req.body.authorized_groups + "', token groups: '" + decoded.user_authorized_groups + "'");
 				} else {
 					res.status(401).send({error: 'Token not authorized for specified groups'});
-					logger.error("verify failed; user not in authorized_groups");
+					logger.error("Verification failed: token/autorized group missmatch for user '" +
+						decoded.user_name + "', requested groups: '" + req.body.authorized_groups + "', token groups: '" + decoded.user_authorized_groups + "'");
 				}
 			} else {
 				res.json(decoded);
-				logger.debug("decoded: "+JSON.stringify(decoded, ut.hideSecrets, 10));
+				logger.info("Verification success for '" + decoded.user_name + "'");
 			}
 		} catch (err) {
-			res.status(500).send({ error: 'Access token could not be decoded'});
-			logger.error("verify failed; cannot decode token");
+			res.status(500).send({ error: 'Invalid token'});
+			logger.error("Verification failed: " + err);
 		}
 	} else {
-		res.status(400).send({ error: 'Access token is missing'});
-		logger.debug("verify failed; no token");
+		res.status(400).send({ error: 'Access token is missing or invalid'});
+		logger.error("Verification failed: No token sent");
 	}
 });
 
