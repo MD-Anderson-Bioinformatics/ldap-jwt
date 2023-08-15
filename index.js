@@ -121,7 +121,8 @@ app.post('/ldap-jwt/authenticate', function (req, res) {
 					user_authorized_groups: userGroupsForPayload
 				}, app.get('jwtTokenSecret'));
 				if (req.body.authorized_groups != undefined) {
-					logger.info("Token generated for '" + req.body.username + "' with groups '" + userGroupsForPayload.join("; ") + "'." +
+					logger.info("Token generated for '" + req.body.username + "' with groups '" +
+						ut.getGroupCN(userGroupsForPayload).join("; ") + "'." +
 						" JWT expires: " + moment(expires).format("MMMM Do YYYY, h:mm:ss a"));
 				} else {
 					logger.info("Token generated for '" + req.body.username + "'." +
@@ -137,7 +138,8 @@ app.post('/ldap-jwt/authenticate', function (req, res) {
 					logger.warn("Request included authorized_groups, but server not configured for authorized_group verification");
 					res.status(401).send({error: "User is not authorized"});
 				} else if (err == "User not in authorized_groups") {
-					logger.warn("Token generation failed: user '" + req.body.username + "' not in '" + req.body.authorized_groups + "'");
+					logger.warn("Token generation failed: user '" + req.body.username + "' not in '" +
+					ut.getGroupCN(req.body.authorized_groups) + "'");
 					res.status(401).send({error: "User is not authorized"});
 				} else {
 					logger.error("Error from authenticate promise: ", err);
@@ -167,11 +169,13 @@ app.post('/ldap-jwt/verify', function (req, res) {
 				if (decoded.hasOwnProperty("user_authorized_groups") && userInAuthorizedGroups(decoded.user_authorized_groups, req.body.authorized_groups)) {
 					res.json(decoded);
 					logger.info("Verification success for '" + decoded.user_name + "', " +
-						"requested groups: '" + req.body.authorized_groups + "', token groups: '" + decoded.user_authorized_groups + "'");
+						"requested groups: '" + ut.getGroupCN(req.body.authorized_groups) +
+						"', token groups: '" + ut.getGroupCN(decoded.user_authorized_groups) + "'");
 				} else {
 					res.status(401).send({error: 'Token not authorized for specified groups'});
 					logger.warn("Verification failed: token/autorized group missmatch for user '" +
-						decoded.user_name + "', requested groups: '" + req.body.authorized_groups + "', token groups: '" + decoded.user_authorized_groups + "'");
+						decoded.user_name + "', requested groups: '" + ut.getGroupCN(req.body.authorized_groups) +
+						"', token groups: '" + ut.getGroupCN(decoded.user_authorized_groups) + "'");
 				}
 			} else {
 				res.json(decoded);
