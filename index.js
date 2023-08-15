@@ -48,7 +48,6 @@ if (settings.hasOwnProperty( 'jwt' )) {
 		settings.jwt.timeout_units = 'hour';
 		logger.warn("Settings.jwt.timeout_units not set - using default: " + settings.jwt.timeout_units);
 	}
-	logger.info('JWT tokens will expire after ' + settings.jwt.timeout + ' ' + settings.jwt.timeout_units);
 	app.set('jwtTokenSecret',
 		settings.jwt.base64 ? new Buffer(settings.jwt.secret, 'base64') : settings.jwt.secret);
 }
@@ -132,13 +131,13 @@ app.post('/ldap-jwt/authenticate', function (req, res) {
 			})
 			.catch(function (err) {
 				if (err.name === 'InvalidCredentialsError' || (typeof err === 'string' && err.match(/no such user/i)) ) {
-					logger.error("Token generation failed: InvalidCredentialsError for '" + req.body.username + "'");
+					logger.warn("Token generation failed: InvalidCredentialsError for '" + req.body.username + "'");
 					res.status(401).send({ error: 'Wrong username or password'});
 				} else if (err == "Server not configured for authorized_group verification") {
-					logger.error("Server not configured for authorized_group verification");
+					logger.warn("Request included authorized_groups, but server not configured for authorized_group verification");
 					res.status(401).send({error: "User is not authorized"});
 				} else if (err == "User not in authorized_groups") {
-					logger.error("Token generation failed: user '" + req.body.username + "' not in '" + req.body.authorized_groups + "'");
+					logger.warn("Token generation failed: user '" + req.body.username + "' not in '" + req.body.authorized_groups + "'");
 					res.status(401).send({error: "User is not authorized"});
 				} else {
 					logger.error("Error from authenticate promise: ", err);
@@ -146,7 +145,7 @@ app.post('/ldap-jwt/authenticate', function (req, res) {
 				}
 			});
 		} else {
-			logger.error("No username or password supplied");
+			logger.warn("No username or password supplied in request");
 			res.status(400).send({error: 'No username or password supplied'});
 		}
 });
@@ -163,7 +162,7 @@ app.post('/ldap-jwt/verify', function (req, res) {
 				logger.debug("verify 400 expired");
 				logger.debug("Expiry data: " + new Date(decoded.exp).toLocaleString());
 				logger.debug("Current time: " + new Date(Date.now()).toLocaleString());
-				logger.info("Verification failed: expired token for '" + decoded.user_name + "'");
+				logger.warn("Verification failed: expired token for '" + decoded.user_name + "'");
 			} else if (req.body.authorized_groups != undefined) {
 				if (decoded.hasOwnProperty("user_authorized_groups") && userInAuthorizedGroups(decoded.user_authorized_groups, req.body.authorized_groups)) {
 					res.json(decoded);
@@ -171,7 +170,7 @@ app.post('/ldap-jwt/verify', function (req, res) {
 						"requested groups: '" + req.body.authorized_groups + "', token groups: '" + decoded.user_authorized_groups + "'");
 				} else {
 					res.status(401).send({error: 'Token not authorized for specified groups'});
-					logger.error("Verification failed: token/autorized group missmatch for user '" +
+					logger.warn("Verification failed: token/autorized group missmatch for user '" +
 						decoded.user_name + "', requested groups: '" + req.body.authorized_groups + "', token groups: '" + decoded.user_authorized_groups + "'");
 				}
 			} else {
@@ -180,11 +179,11 @@ app.post('/ldap-jwt/verify', function (req, res) {
 			}
 		} catch (err) {
 			res.status(500).send({ error: 'Invalid token'});
-			logger.error("Verification failed: " + err);
+			logger.warn("Verification failed: " + err);
 		}
 	} else {
 		res.status(400).send({ error: 'Access token is missing or invalid'});
-		logger.error("Verification failed: No token sent");
+		logger.warn("Verification failed: No token sent");
 	}
 });
 
@@ -212,14 +211,16 @@ if (settings.ssl) {
 	};
 	var server = https.createServer(options,app).listen(port,function(){
 		logger.info("Express server listenting on port " + port + " using httpS");
+		logger.info('JWT tokens will expire after ' + settings.jwt.timeout + ' ' + settings.jwt.timeout_units);
 			app.on("error",(err) => {
 			logger.error("ERROR: " + err.stack);
 		});
 	});
 } else {
-	logger.warn("Server configured for http (not httpS).");
 	var server = http.createServer(app).listen(port,function(){
 		logger.info("Express server listenting on port " + port + " using http");
+		logger.info('JWT tokens will expire after ' + settings.jwt.timeout + ' ' + settings.jwt.timeout_units);
+		logger.warn("Server configured for http (not httpS).");
 		app.on("error",(err) => {
 			logger.error("ERROR: " + err.stack);
 		});
