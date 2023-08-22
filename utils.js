@@ -3,10 +3,15 @@ const logger = require('./logger');
 /*
 * Function to remove confidential keys from the object
 * Designed to be used in JSON.stringify
+*
+* Also removes the logger object, because it causes a circular reference
 */
-function hideSecrets(key, value) {
+function hideSecretsAndLogger(key, value) {
 	if (key === 'bindCredentials' || key === 'password') {
 		return "********";
+	}
+	if (key === 'log' || key === 'logger') {
+		return "log object hidden because it creates circular reference";
 	}
 	return value;
 }
@@ -39,6 +44,6 @@ function getGroupCN(groups) {
 }
 
 module.exports = {
-	hideSecrets: hideSecrets,
+	hideSecretsAndLogger: hideSecretsAndLogger,
 	getGroupCN: getGroupCN
 }

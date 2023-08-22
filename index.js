@@ -3,7 +3,7 @@ const ut = require('./utils');
 const logger = require('./logger');
 
 logger.debug("Node version: "+process.version);
-logger.debug("Settings: " + JSON.stringify(settings, ut.hideSecrets, 2));
+logger.debug("Settings: " + JSON.stringify(settings, ut.hideSecretsAndLogger, 2));
 
 var bodyParser = require('body-parser');
 var jwt = require('jwt-simple');
@@ -33,6 +33,7 @@ if (settings.hasOwnProperty( 'ldap' ) && settings.hasOwnProperty( 'jwt' )) {
 	logger.debug("LdapAuth settings: " + JSON.stringify(settings.ldap, ut.hideSecrets, 2));
 	logger.debug("Adding bunyan logger to LdapAuth settings");
 	settings.ldap['log'] = logger;
+	logger.debug("LdapAuth settings: " + JSON.stringify(settings.ldap, ut.hideSecretsAndLogger, 2));
 } else {
 	logger.error("LDAP and JWT settings are required. Exiting.");
 	process.exit(1);
@@ -68,6 +69,7 @@ let bind = function () {
 let unbind = function (auth) {
 	try {
 		logger.debug("Unbinding")
+		logger.debug("settings: " + JSON.stringify(settings.ldap, ut.hideSecretsAndLogger, 2));
 		auth.close();
 	} catch (err) {
 		logger.error("Error unbinding: ", err);
@@ -96,7 +98,7 @@ var authenticate = function (username, password) {
 
 app.post('/ldap-jwt/authenticate', function (req, res) {
 	if(req.body.username && req.body.password) {
-		logger.debug(JSON.stringify(req.body, ut.hideSecrets, 2));
+		logger.debug(JSON.stringify(req.body, ut.hideSecretsAndLogger, 2));
 		authenticate(req.body.username, req.body.password)
 			.then(function(user) {
 				logger.debug("User authenticated");
@@ -153,7 +155,7 @@ app.post('/ldap-jwt/authenticate', function (req, res) {
 });
 
 app.post('/ldap-jwt/verify', function (req, res) {
-	logger.debug("verify endpoint: " + JSON.stringify(req.body, ut.hideSecrets, 2));
+	logger.debug("verify endpoint: " + JSON.stringify(req.body, ut.hideSecretsAndLogger, 2));
 	var token = req.body.token;
 	if (token && settings.hasOwnProperty( 'jwt' )) {
 		// jwtTokenSecret is defined iff there is a settings.jwt object.
