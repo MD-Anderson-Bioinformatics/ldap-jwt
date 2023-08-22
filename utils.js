@@ -11,7 +11,7 @@ function hideSecretsAndLogger(key, value) {
 		return "********";
 	}
 	if (key === 'log' || key === 'logger') {
-		return "log object hidden because it creates circular reference";
+		return "<log object (hidden because it creates circular reference)>";
 	}
 	return value;
 }
