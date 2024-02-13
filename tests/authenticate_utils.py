@@ -83,7 +83,7 @@ def logVerify200(r):
 
 def init_logging(log_level):
   """Sets up basic logging; defines global log variable"""
-  LOG_LEVEL = log_level
+  LOG_LEVEL = log_level.upper()
   LOGFORMAT = "%(log_color)s[%(asctime)s:L%(lineno)4s:%(funcName)10s():%(levelname)s]%(reset)s %(message)s"
   logging.getLogger('requests').setLevel(logging.ERROR)
   logging.getLogger('urllib3').setLevel(logging.ERROR)

@@ -12,6 +12,7 @@ Heavily based on the work of [gregfroese/ldapservice](https://github.com/gregfro
 * Simplified endpoints
 * Added option to use SSL (httpS) 
 * Added option to specify authorized groups
+* Added option to bind as the user attempting to authenticate
 
 
 ## Usage
@@ -24,9 +25,17 @@ Place configuration variables in .env file. Example:
 ```bash
 LDAP=enabled
 LDAPAUTH_URL=ldaps://hostname
-LDAPAUTH_BINDCREDENTIALS=secret
 LDAPAUTH_SEARCHBASE=dc=example,dc=com
-LDAPAUTH_BINDDN=cn=bind_user,dc=examle,dc=com
+## If LDAPAUTH_BINDDN and LDAPAUTH_BINDCREDENTIALS are given,
+## they will be used for binding to Active Directory.
+LDAPAUTH_BINDDN=cn=binding,dc=example,dc=com
+LDAPAUTH_BINDCREDENTIALS=secret
+## Otherwise, authenticating user and corresponding credentials will be
+## used to bind. LDAPAUTH_BINDDN_PREFIX and LDAPAUTH_BINDDN_SUFFIX must
+## then be specified to flesh out the
+## distinguished name (DN) of the user. For example:
+# LDAPAUTH_BINDDN_PREFIX="cn="
+# LDAPAUTH_BINDDN_SUFFIX=",ou=people,dc=example,dc=com"
 CLIENT_ID=test-client-id
 CLIENT_SECRET=test-client-secret
 DEBUG=true  ## <-- turns on debugging

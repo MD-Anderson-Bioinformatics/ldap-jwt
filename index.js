@@ -30,9 +30,9 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(require('cors')());
 
 if (settings.hasOwnProperty( 'ldap' ) && settings.hasOwnProperty( 'jwt' )) {
-	logger.debug("LdapAuth settings: " + JSON.stringify(settings.ldap, ut.hideSecrets, 2));
-	logger.debug("Adding bunyan logger to LdapAuth settings");
-	settings.ldap['log'] = logger;
+	if (!settings.ldap.hasOwnProperty('bindDn')) {
+		settings.ldap.bindAsUser = true;
+	}
 	logger.debug("LdapAuth settings: " + JSON.stringify(settings.ldap, ut.hideSecretsAndLogger, 2));
 } else {
 	logger.error("LDAP and JWT settings are required. Exiting.");
@@ -54,10 +54,21 @@ if (settings.hasOwnProperty( 'jwt' )) {
 }
 
 /* Create a new ldap connection */
-let bind = function () {
+let bind = function (username, password) {
 	try {
-		logger.debug("Creating new bind")
-		let auth = new LdapAuth(settings.ldap);
+		let settingsForBind = structuredClone(settings.ldap); // structuredClone to avoid changing the original settings
+		settingsForBind.log = logger; // adding bunyan logger to LdapAuth settings
+		if (settings.ldap.bindAsUser) {
+			logger.debug("Binding as user");
+			settingsForBind.bindCredentials = password;
+			settingsForBind.bindDn = settings.ldap.binddn_prefix + username + settings.ldap.binddn_suffix;
+		} else {
+			logger.debug("Binding as service account");
+			settingsForBind.bindCredentials = settings.ldap.bindCredentials;
+			settingsForBind.bindDn = settings.ldap.bindDn;
+		}
+		logger.debug("Creating new bind with settings: " + JSON.stringify(settingsForBind, ut.hideSecretsAndLogger, 2));
+		let auth = new LdapAuth(settingsForBind);
 		return auth;
 	} catch (err) {
 		logger.error("Error creating new bind: ", err);
@@ -69,7 +80,7 @@ let bind = function () {
 let unbind = function (auth) {
 	try {
 		logger.debug("Unbinding")
-		logger.debug("settings: " + JSON.stringify(settings.ldap, ut.hideSecretsAndLogger, 2));
+		logger.debug("Original settings: " + JSON.stringify(settings.ldap, ut.hideSecretsAndLogger, 2));
 		auth.close();
 	} catch (err) {
 		logger.error("Error unbinding: ", err);
@@ -77,7 +88,7 @@ let unbind = function (auth) {
 }
 
 var authenticate = function (username, password) {
-	let auth = bind();
+	let auth = bind(username, password);
 	logger.debug("Authenticating user: " + username);
 	return new Promise(function (resolve, reject) {
 		logger.debug("In authenticate promise");
@@ -218,7 +229,13 @@ if (settings.ssl) {
 	var server = https.createServer(options,app).listen(port,function(){
 		logger.info("Express server listenting on port " + port + " using httpS");
 		logger.info('JWT tokens will expire after ' + settings.jwt.timeout + ' ' + settings.jwt.timeout_units);
-			app.on("error",(err) => {
+		logger.info("LDAP url: " + settings.ldap.url);
+		if (settings.ldap.bindAsUser) {
+			logger.info("Will bind with authenticating user's credentials");
+		} else {
+			logger.info("Will bind with service account: " + ut.getGroupCN(settings.ldap.bindDn));
+		}
+		app.on("error",(err) => {
 			logger.error("ERROR: " + err.stack);
 		});
 	});
@@ -226,13 +243,16 @@ if (settings.ssl) {
 	var server = http.createServer(app).listen(port,function(){
 		logger.info("Express server listenting on port " + port + " using http");
 		logger.info('JWT tokens will expire after ' + settings.jwt.timeout + ' ' + settings.jwt.timeout_units);
+		logger.info("LDAP url: " + settings.ldap.url);
+		if (settings.ldap.bindAsUser) {
+			logger.info("Will bind with authenticating user's credentials");
+		} else {
+			logger.info("Will bind with service account: " + settings.ldap.bindDn);
+		}
 		logger.warn("Server configured for http (not httpS).");
 		app.on("error",(err) => {
 			logger.error("ERROR: " + err.stack);
 		});
 	});
 }
-
-
-
 
