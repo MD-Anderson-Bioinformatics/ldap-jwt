@@ -38,7 +38,7 @@ LDAPAUTH_BINDCREDENTIALS=secret
 # LDAPAUTH_BINDDN_SUFFIX=",ou=people,dc=example,dc=com"
 CLIENT_ID=test-client-id
 CLIENT_SECRET=test-client-secret
-DEBUG=true  ## <-- turns on debugging
+DEBUG=true  ## <-- start server in debug mode (e.g. use nodeman)
 SSL=true ## <-- turns on SSL (httpS)
 ```
 

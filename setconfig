@@ -190,13 +190,6 @@ sed -e "s/CLIENT_ID/${CLIENT_ID}/" \
 HERE
 fi
 
-# If env DEBUG defined, turn on debugging
-if [ "X${DEBUG}" != X ] ; then
->&2 echo DEBUG is enabled
- echo ' ,
-	"debug": "true"'
-fi
-
 # If env SSL defined, use SSL
 if [ "X${SSL}" != X ] ; then
 >&2 echo Using SSL
@@ -210,8 +203,15 @@ echo "}"
 # End redirection to config file
 } > config/config.json
 
-# Execute server
-exec npm start
+# If env DEBUG defined, start server in debug mode,
+# otherwise start server in normal mode.
+#if [ "X${DEBUG}" != X ] ; then
+if [ "${DEBUG}" ] ; then
+  echo "Starting server in debug mode"
+  exec npm run devstart
+else
+  exec npm start
+fi
 
 # Should not happen.  Use exit code 0 to prevent container restart.
 exit 0
