@@ -1,8 +1,4 @@
-# Example Docker Usage:
-#   docker build -t ldap-jwt .
-#   docker run -p 3000:3000 --rm -it --env-file config.txt ldap-jwt
-
-FROM node:17.4.0
+FROM node:20.11.1-slim
 
 ENV LDAPJWT_BASE_DIR="/usr/src/app"
 EXPOSE 3000
