@@ -50,9 +50,9 @@ if [ "X${LDAP}" = Xenabled ] ; then
   if [[ -v LDAPAUTH_BINDDN_PREFIX && ! -v LDAPAUTH_BINDDN_SUFFIX ]]; then
     >&2 echo Error: LDAPAUTH_BINDDN_PREFIX is defined but LDAPAUTH_BINDDN_SUFFIX is not.
     exit 0
-    fi
-  if [[ LDAPAUTH_BINDDN_SUFFIX && ! -v LDAPAUTH_BINDDN_PREFIX ]]; then
-    >&2 echo Error: LDAPAUTH_BINDDN_PREFIX is defined but LDAPAUTH_BINDDN_SUFFIX is not.
+  fi
+  if [[ -v LDAPAUTH_BINDDN_SUFFIX && ! -v LDAPAUTH_BINDDN_PREFIX ]]; then
+    >&2 echo Error: LDAPAUTH_BINDDN_SUFFIX is defined but LDAPAUTH_BINDDN_PREFIX is not.
     exit 0
   fi
   ## Check for conflicting configurations.
