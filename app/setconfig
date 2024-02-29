@@ -190,8 +190,8 @@ sed -e "s/CLIENT_ID/${CLIENT_ID}/" \
 HERE
 fi
 
-# If env SSL defined, use SSL
-if [ "X${SSL}" != X ] ; then
+# If env SSL is not 'falsey', use SSL (e.g. httpS)
+if [[ ${SSL} && ${SSL} != 0 && ${SSL} != "false" && ${SSL} != "FALSE" && ${SSL} != "False" ]]; then
 >&2 echo Using SSL
  echo ' ,
 	"ssl": "true"'

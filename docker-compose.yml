@@ -26,6 +26,7 @@ services:
       - LDAPAUTH_URL
       - LOG_LEVEL
       - PORT=${PORT:-3000}
+      - SSL=${SSL:-true}
     #volumes:
     # mount current directory (to facilitate development only)
     #  - ${PWD}/app:/usr/src/app
