@@ -1,0 +1,33 @@
+version: "3.7"
+
+services:
+  ldap-jwt:
+    build:
+      context: .
+      target: ${BUILD_TARGET:-prod}
+      args:
+        PORT: ${PORT:-3000}
+    image: ${IMAGE:-ldap-jwt}:${TAG:-latest}
+    container_name: ldap-jwt
+    environment:
+      - BUILD_TARGET # used decide of `npm run devstart` or `npm start` in setconfig
+      - CLIENT_ID
+      - CLIENT_SECRET
+      - JWT_TIMEOUT
+      - JWT_TIMEOUT_UNITS
+      - LDAP
+      # Uncomment these (and comment out LDAPAUTH_BINDDN_PREFIX and LDAPAUTH_BINDDN_SUFFIX)
+      # to use service accout to bind to LDAP
+      #- LDAPAUTH_BINDCREDENTIALS
+      #- LDAPAUTH_BINDDN
+      - LDAPAUTH_BINDDN_PREFIX
+      - LDAPAUTH_BINDDN_SUFFIX
+      - LDAPAUTH_SEARCHBASE
+      - LDAPAUTH_URL
+      - LOG_LEVEL
+      - PORT=${PORT:-3000}
+    #volumes:
+    # mount current directory (to facilitate development only)
+    #  - ${PWD}/app:/usr/src/app
+    ports:
+      - ${PORT:-3000}:${PORT:-3000}

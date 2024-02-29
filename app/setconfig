@@ -203,13 +203,11 @@ echo "}"
 # End redirection to config file
 } > config/config.json
 
-# If env DEBUG defined, start server in debug mode,
-# otherwise start server in normal mode.
-#if [ "X${DEBUG}" != X ] ; then
-if [ "${DEBUG}" ] ; then
-  echo "Starting server in debug mode"
+if [ "${BUILD_TARGET}" == "dev" ] ; then
+  echo "Starting server for deveopment (requires devDependency nodemon)"
   exec npm run devstart
 else
+  echo "Starting server for production"
   exec npm start
 fi
 
