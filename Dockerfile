@@ -5,11 +5,8 @@ EXPOSE 3000
 
 WORKDIR "${LDAPJWT_BASE_DIR}"
 
-# Load dependencies to optimize the build cache
-COPY package.json ./
-RUN npm install
+COPY app .
 
-#Copy code
-COPY . ./
+RUN npm install
 
 CMD [ "./setconfig" ]
