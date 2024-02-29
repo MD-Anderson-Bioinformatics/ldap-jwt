@@ -218,6 +218,12 @@ let userGroupAuthGroupIntersection = function(userGroups, authorized_groups) {
 	return userGroups.filter(group => authorized_groups.includes(group));
 }
 
+// Health check endpoint
+app.get('/ldap-jwt/health', function (req, res) {
+	logger.debug("GET Health check");
+	res.status(200).send({message: 'OK'});
+});
+
 var port = (process.env.PORT || 3000);
 
 
