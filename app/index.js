@@ -193,7 +193,7 @@ app.post('/ldap-jwt/verify', function (req, res) {
 						"', token groups: '" + ut.getGroupCN(decoded.user_authorized_groups) + "'");
 				} else {
 					res.status(401).send({error: 'Token not authorized for specified groups'});
-					logger.warn("Verification failed: token/autorized group missmatch for user '" +
+					logger.warn("Verification failed: token/authorized group mismatch for user '" +
 						decoded.user_name + "', requested groups: '" + ut.getGroupCN(req.body.authorized_groups) +
 						"', token groups: '" + ut.getGroupCN(decoded.user_authorized_groups) + "'");
 				}
@@ -240,7 +240,7 @@ if (settings.ssl) {
 	    cert: fs.readFileSync("./ssl/server.crt"),
 	};
 	var server = https.createServer(options,app).listen(port,function(){
-		logger.info("Express server listenting on port " + port + " using httpS");
+		logger.info("Express server listening on port " + port + " using httpS");
 		logger.info('JWT tokens will expire after ' + settings.jwt.timeout + ' ' + settings.jwt.timeout_units);
 		logger.info("LDAP url: " + settings.ldap.url);
 		if (settings.ldap.bindAsUser) {
@@ -254,7 +254,7 @@ if (settings.ssl) {
 	});
 } else {
 	var server = http.createServer(app).listen(port,function(){
-		logger.info("Express server listenting on port " + port + " using http");
+		logger.info("Express server listening on port " + port + " using http");
 		logger.info('JWT tokens will expire after ' + settings.jwt.timeout + ' ' + settings.jwt.timeout_units);
 		logger.info("LDAP url: " + settings.ldap.url);
 		if (settings.ldap.bindAsUser) {
