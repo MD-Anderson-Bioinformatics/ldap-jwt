@@ -54,46 +54,53 @@ if (settings.hasOwnProperty( 'jwt' )) {
 }
 
 /* Create a new ldap connection */
-let bind = function (username, password) {
-	try {
-		let settingsForBind = structuredClone(settings.ldap); // structuredClone to avoid changing the original settings
-		settingsForBind.log = logger; // adding bunyan logger to LdapAuth settings
-		if (settings.ldap.bindAsUser) {
-			logger.debug("Binding as user");
-			settingsForBind.bindCredentials = password;
-			settingsForBind.bindDn = settings.ldap.binddn_prefix + username + settings.ldap.binddn_suffix;
-		} else {
-			logger.debug("Binding as service account");
-			settingsForBind.bindCredentials = settings.ldap.bindCredentials;
-			settingsForBind.bindDn = settings.ldap.bindDn;
+let bind = async function (username, password) {
+	return new Promise(function (resolve, reject) {
+		try {
+			let settingsForBind = structuredClone(settings.ldap); // structuredClone to avoid changing the original settings
+			settingsForBind.log = logger; // adding bunyan logger to LdapAuth settings
+			if (settings.ldap.bindAsUser) {
+				logger.debug("Binding as user");
+				settingsForBind.bindCredentials = password;
+				settingsForBind.bindDn = settings.ldap.binddn_prefix + username + settings.ldap.binddn_suffix;
+			} else {
+				logger.debug("Binding as service account");
+				settingsForBind.bindCredentials = settings.ldap.bindCredentials;
+				settingsForBind.bindDn = settings.ldap.bindDn;
+			}
+			logger.debug("Creating new bind with settings: " + JSON.stringify(settingsForBind, ut.hideSecretsAndLogger, 2));
+			let auth = new LdapAuth(settingsForBind);
+			logger.debug("New bind created");
+			resolve(auth);
+		} catch (err) {
+			logger.error("Error creating new bind: ", err);
+			reject();
 		}
-		logger.debug("Creating new bind with settings: " + JSON.stringify(settingsForBind, ut.hideSecretsAndLogger, 2));
-		let auth = new LdapAuth(settingsForBind);
-		return auth;
-	} catch (err) {
-		logger.error("Error creating new bind: ", err);
-		return null;
-	}
+	})
 }
 
 /* Closing ldap connection */
-let unbind = function (auth) {
-	try {
-		logger.debug("Unbinding")
-		logger.debug("Original settings: " + JSON.stringify(settings.ldap, ut.hideSecretsAndLogger, 2));
-		auth.close();
-	} catch (err) {
-		logger.error("Error unbinding: ", err);
-	}
+let unbind = async function (auth) {
+	return new Promise(function (resolve, reject) {
+		try {
+			logger.debug("Unbinding")
+			logger.debug("Original settings: " + JSON.stringify(settings.ldap, ut.hideSecretsAndLogger, 2));
+			auth.close();
+			resolve();
+		} catch (err) {
+			logger.error("Error unbinding: ", err);
+			reject();
+		}
+	})
 }
 
-var authenticate = function (username, password) {
-	let auth = bind(username, password);
+let authenticate = async function (username, password) {
+	let auth = await bind(username, password);
 	logger.debug("Authenticating user: " + username);
 	return new Promise(function (resolve, reject) {
 		logger.debug("In authenticate promise");
-		auth.authenticate(username, password, function (err, user) {
-			unbind(auth);
+		auth.authenticate(username, password, async function (err, user) {
+			await unbind(auth);
 			if(err) {
 				logger.debug("ERROR: Reject because of err: ", err);
 				reject(err);
