@@ -3,9 +3,12 @@
   This module is a mock LDAP server that can be used for testing purposes.
   It is based on the ldap-server-mock package, which is a simple LDAP server
   that can be used to test LDAP client applications.
+
+  It does not support actual authentication--the passwords are not checked.
 */
 const logger = require('./logger');
 const lsm = require('ldap-server-mock');
+
 const users = [
   {
     dn: 'cn=user1,dc=example,dc=com',
