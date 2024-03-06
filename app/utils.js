@@ -1,12 +1,15 @@
 const logger = require('./logger');
 var LdapAuth = require('ldapauth-fork');
 
-/*
-* Function to remove confidential keys from the object
-* Designed to be used in JSON.stringify
-*
-* Also removes the logger object, because it causes a circular reference
-*/
+/**
+ * Replaces sensitive information and logger objects in a given key-value pair with placeholder strings.
+ *
+ * @param {string} key - The key of the key-value pair.
+ * @param {*} value - The value of the key-value pair.
+ * @returns {*} If the key is 'bindCredentials' or 'password', returns a string of asterisks.
+ * If the key is 'log' or 'logger', returns a placeholder string (because these cause a circular reference.
+ * Otherwise, returns the original value.
+ */
 function hideSecretsAndLogger(key, value) {
 	if (key === 'bindCredentials' || key === 'password') {
 		return "********";
@@ -17,15 +20,16 @@ function hideSecretsAndLogger(key, value) {
 	return value;
 }
 
-/*
-* Function to get the CN from the groups
-*
-* LDAP groups have long distinguished names (DN).
-* The CN is the first part of the DN, e.g. CN=group1,OU=groups,DC=example,DC=com
-*
-* @param groups - string or array of strings
-* @return string or array of strings
-*/
+/**
+ * Extracts the Common Name (CN) from a group or a list of groups.
+ *
+ * @param {string|string[]} groups - A single group string or an array of group strings.
+ * Each string should be in the format 'CN=GroupName,OU=OrgUnit,...'.
+ * @returns {string|string[]} The CN of the group(s). If `groups` is a string, returns a single CN string.
+ * If `groups` is an array, returns an array of CN strings. If an error occurs during extraction,
+ * returns the original `groups` value.
+ * @throws Will log an error if an exception occurs during CN extraction.
+ */
 function getGroupCN(groups) {
 	if (groups == undefined) {
 		return undefined;
@@ -43,6 +47,7 @@ function getGroupCN(groups) {
 		return groups;
 	}
 }
+
 /**
  * Authenticates a user with given username and password.
  *
