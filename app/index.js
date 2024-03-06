@@ -53,71 +53,12 @@ if (settings.hasOwnProperty( 'jwt' )) {
 		settings.jwt.base64 ? new Buffer(settings.jwt.secret, 'base64') : settings.jwt.secret);
 }
 
-/* Create a new ldap connection */
-let bind = async function (username, password) {
-	return new Promise(function (resolve, reject) {
-		try {
-			let settingsForBind = structuredClone(settings.ldap); // structuredClone to avoid changing the original settings
-			settingsForBind.log = logger; // adding bunyan logger to LdapAuth settings
-			if (settings.ldap.bindAsUser) {
-				logger.debug("Binding as user");
-				settingsForBind.bindCredentials = password;
-				settingsForBind.bindDn = settings.ldap.binddn_prefix + username + settings.ldap.binddn_suffix;
-			} else {
-				logger.debug("Binding as service account");
-				settingsForBind.bindCredentials = settings.ldap.bindCredentials;
-				settingsForBind.bindDn = settings.ldap.bindDn;
-			}
-			logger.debug("Creating new bind with settings: " + JSON.stringify(settingsForBind, ut.hideSecretsAndLogger, 2));
-			let auth = new LdapAuth(settingsForBind);
-			logger.debug("New bind created");
-			resolve(auth);
-		} catch (err) {
-			logger.error("Error creating new bind: ", err);
-			reject();
-		}
-	})
-}
 
-/* Closing ldap connection */
-let unbind = async function (auth) {
-	return new Promise(function (resolve, reject) {
-		try {
-			logger.debug("Unbinding")
-			logger.debug("Original settings: " + JSON.stringify(settings.ldap, ut.hideSecretsAndLogger, 2));
-			auth.close();
-			resolve();
-		} catch (err) {
-			logger.error("Error unbinding: ", err);
-			reject();
-		}
-	})
-}
-
-let authenticate = async function (username, password) {
-	let auth = await bind(username, password);
-	logger.debug("Authenticating user: " + username);
-	return new Promise(function (resolve, reject) {
-		logger.debug("In authenticate promise");
-		auth.authenticate(username, password, async function (err, user) {
-			await unbind(auth);
-			if(err) {
-				logger.debug("ERROR: Reject because of err: ", err);
-				reject(err);
-			} else if (!user) {
-				logger.debug("ERROR: Reject because no user");
-				reject();
-			} else {
-				resolve(user);
-			}
-		});
-	});
-};
 
 app.post('/ldap-jwt/authenticate', function (req, res) {
 	if(req.body.username && req.body.password) {
 		logger.debug(JSON.stringify(req.body, ut.hideSecretsAndLogger, 2));
-		authenticate(req.body.username, req.body.password)
+		ut.authenticate(req.body.username, req.body.password, settings)
 			.then(function(user) {
 				logger.debug("User authenticated");
 				if (req.body.authorized_groups != undefined) {
