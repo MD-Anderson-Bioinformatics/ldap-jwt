@@ -29,6 +29,12 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(require('cors')());
 
+if (process.env.BUILD_TARGET === 'dev') {
+	logger.info("Starting mock LDAP server because BUILD_TARGET is dev");
+	const mockserver = require('./mock-server');
+	mockserver.startServer();
+}
+
 if (settings.hasOwnProperty( 'ldap' ) && settings.hasOwnProperty( 'jwt' )) {
 	if (!settings.ldap.hasOwnProperty('bindDn')) {
 		settings.ldap.bindAsUser = true;
