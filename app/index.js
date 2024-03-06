@@ -7,9 +7,6 @@ logger.debug("Settings: " + JSON.stringify(settings, ut.hideSecretsAndLogger, 2)
 
 var bodyParser = require('body-parser');
 var jwt = require('jwt-simple');
-var moment = require('moment');
-var LdapAuth = require('ldapauth-fork');
-var Promise  = require('promise');
 var fs = require('fs'),
     express = require('express');
 
@@ -59,129 +56,52 @@ if (settings.hasOwnProperty( 'jwt' )) {
 		settings.jwt.base64 ? new Buffer(settings.jwt.secret, 'base64') : settings.jwt.secret);
 }
 
-
-
 app.post('/ldap-jwt/authenticate', function (req, res) {
-	if(req.body.username && req.body.password) {
-		logger.debug(JSON.stringify(req.body, ut.hideSecretsAndLogger, 2));
-		ut.authenticate(req.body.username, req.body.password, settings)
-			.then(function(user) {
-				logger.debug("User authenticated");
-				if (req.body.authorized_groups != undefined) {
-					logger.debug("authorized_groups specified: " + req.body.authorized_groups);
-					if (!user.hasOwnProperty("memberOf")) {
-						throw "Server not configured for authorized_group verification";
-					}
-					var userGroupsForPayload = userGroupAuthGroupIntersection(user.memberOf, req.body.authorized_groups);
-					if (!userInAuthorizedGroups(user.memberOf, req.body.authorized_groups)) {
-						throw "User not in authorized_groups";
-					}
-					logger.debug("userGroupsForPayload: " + userGroupsForPayload);
-				}
-				var expires = moment().add(settings.jwt.timeout, settings.jwt.timeout_units).valueOf();
-				var token = jwt.encode({
-					exp: expires,
-					aud: settings.jwt.clientid,
-					user_name: user.uid,
-					full_name: user.displayName,
-					mail: user.mail,
-					user_authorized_groups: userGroupsForPayload
-				}, app.get('jwtTokenSecret'));
-				if (req.body.authorized_groups != undefined) {
-					logger.info("Token generated for '" + req.body.username + "' with groups '" +
-						ut.getGroupCN(userGroupsForPayload).join("; ") + "'." +
-						" JWT expires: " + moment(expires).format("MMMM Do YYYY, h:mm:ss a"));
-				} else {
-					logger.info("Token generated for '" + req.body.username + "'." +
-						" JWT expires: " + moment(expires).format("MMMM Do YYYY, h:mm:ss a"));
-				}
-				res.json({token: token, full_name: user.displayName, mail: user.mail});
-			})
-			.catch(function (err) {
-				if (err.name === 'InvalidCredentialsError' || (typeof err === 'string' && err.match(/no such user/i)) ) {
-					logger.warn("Token generation failed: InvalidCredentialsError for '" + req.body.username + "'");
-					res.status(401).send({ error: 'Wrong username or password'});
-				} else if (err == "Server not configured for authorized_group verification") {
-					logger.warn("Request included authorized_groups, but server not configured for authorized_group verification");
-					res.status(401).send({error: "User is not authorized"});
-				} else if (err == "User not in authorized_groups") {
-					logger.warn("Token generation failed: user '" + req.body.username + "' not in '" +
-					ut.getGroupCN(req.body.authorized_groups) + "'");
-					res.status(401).send({error: "User is not authorized"});
-				} else {
-					logger.error("Error from authenticate promise: ", err);
-					res.status(500).send({ error: 'Unexpected Error. Please try again.'});
-				}
+	if(!req.body.username || !req.body.password) {
+		logger.warn("No username or password supplied in request");
+		res.status(400).send({error: 'No username or password supplied'});
+		return false;
+	}
+	ut.authenticateHandler(req.body.username, req.body.password, settings, req.body.authorized_groups)
+		.then(function (authResponse) {
+			res.status(authResponse.httpStatus).send({
+				token: authResponse.token,
+				full_name: authResponse.full_name,
+				mail: authResponse.mail
 			});
-		} else {
-			logger.warn("No username or password supplied in request");
-			res.status(400).send({error: 'No username or password supplied'});
-		}
+		})
+		.catch(function (err) {
+			res.status(err.httpStatus).send({error: err.message});
+		});
 });
 
 app.post('/ldap-jwt/verify', function (req, res) {
-	logger.debug("verify endpoint: " + JSON.stringify(req.body, ut.hideSecretsAndLogger, 2));
-	var token = req.body.token;
-	if (token && settings.hasOwnProperty( 'jwt' )) {
-		// jwtTokenSecret is defined iff there is a settings.jwt object.
-		try {
-			var decoded = jwt.decode(token, app.get('jwtTokenSecret'));
-			if (decoded.exp <= Date.now()) {
-				res.status(400).send({ error: 'Access token has expired'});
-				logger.debug("verify 400 expired");
-				logger.debug("Expiry data: " + new Date(decoded.exp).toLocaleString());
-				logger.debug("Current time: " + new Date(Date.now()).toLocaleString());
-				logger.warn("Verification failed: expired token for '" + decoded.user_name + "'");
-			} else if (req.body.authorized_groups != undefined) {
-				if (decoded.hasOwnProperty("user_authorized_groups") && userInAuthorizedGroups(decoded.user_authorized_groups, req.body.authorized_groups)) {
-					res.json(decoded);
-					logger.info("Verification success for '" + decoded.user_name + "', " +
-						"requested groups: '" + ut.getGroupCN(req.body.authorized_groups) +
-						"', token groups: '" + ut.getGroupCN(decoded.user_authorized_groups) + "'");
-				} else {
-					res.status(401).send({error: 'Token not authorized for specified groups'});
-					logger.warn("Verification failed: token/authorized group mismatch for user '" +
-						decoded.user_name + "', requested groups: '" + ut.getGroupCN(req.body.authorized_groups) +
-						"', token groups: '" + ut.getGroupCN(decoded.user_authorized_groups) + "'");
-				}
-			} else {
-				res.json(decoded);
-				logger.info("Verification success for '" + decoded.user_name + "'");
-			}
-		} catch (err) {
-			res.status(500).send({ error: 'Invalid token'});
-			logger.warn("Verification failed: " + err);
-		}
+	if (!req.body.token) {
+		logger.warn("No token supplied in request");
+		res.status(400).send({error: 'No token supplied'});
+		return false;
+	}
+	if (!settings.hasOwnProperty( 'jwt' )) {
+		logger.error("JWT settings not found!");
+		res.status(500).send({error: 'Server error'});
+		return false;
+	}
+	let validation = ut.verifyHandler(req.body.token, req.body.authorized_groups);
+	if (validation.httpStatus == 200) {
+		res.status(200).send(validation.decodedToken);
 	} else {
-		res.status(400).send({ error: 'Access token is missing or invalid'});
-		logger.warn("Verification failed: No token sent");
+		res.status(validation.httpStatus).send({error: validation.message});
 	}
 });
 
-let userInAuthorizedGroups = function(userGroups, authorized_groups) {
-	if (!Array.isArray(userGroups)) userGroups = [ userGroups ];
-	if (!Array.isArray(authorized_groups)) authorized_groups = [ authorized_groups ];
-	logger.debug("userGroups: " + userGroups);
-	logger.debug("authorized_groups: " + authorized_groups);
-	return userGroups.some(group => authorized_groups.includes(group));
-}
-
-let userGroupAuthGroupIntersection = function(userGroups, authorized_groups) {
-	if (!Array.isArray(userGroups)) userGroups = [ userGroups ];
-	if (!Array.isArray(authorized_groups)) authorized_groups = [ authorized_groups ];
-	return userGroups.filter(group => authorized_groups.includes(group));
-}
-
 // Health check endpoint
 app.get('/ldap-jwt/health', function (req, res) {
-	logger.debug("GET Health check");
 	res.status(200).send({message: 'OK'});
 });
 
 var port = (process.env.PORT || 3000);
 
-
-if (settings.ssl) {
+if (settings.ssl) { // use httpS
 	var options = {
 	    key:  fs.readFileSync("./ssl/server.key"),
 	    cert: fs.readFileSync("./ssl/server.crt"),
@@ -199,7 +119,7 @@ if (settings.ssl) {
 			logger.error("ERROR: " + err.stack);
 		});
 	});
-} else {
+} else { // use http
 	var server = http.createServer(app).listen(port,function(){
 		logger.info("Express server listening on port " + port + " using http");
 		logger.info('JWT tokens will expire after ' + settings.jwt.timeout + ' ' + settings.jwt.timeout_units);
@@ -216,3 +136,5 @@ if (settings.ssl) {
 	});
 }
 
+// export server for testing
+module.exports = server;
