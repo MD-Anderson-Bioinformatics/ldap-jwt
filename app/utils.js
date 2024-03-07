@@ -68,8 +68,15 @@ async function authenticateHandler(username, password, settings, authorized_grou
  * successful or an error message if it was not.
  */
 function verifyHandler(token, authorized_groups) {
+	// first try/catch is for decoding the token
 	try {
 		var decodedToken = jwt.decode(token, app.get('jwtTokenSecret'));
+	} catch (err) {
+		logger.warn("Error decoding token: " + err);
+		return({httpStatus: 401, message: 'User is not authorized'});
+	}
+	// second try/catch is for verifying token is valid
+	try {
 		if (decodedToken.exp <= Date.now()) {
 			logger.warn("Verification failed: expired token for '" + decodedToken.user_name + "'");
 			return({httpStatus: 400, message: 'Access token has expired'});
