@@ -15,7 +15,10 @@ const users = [
     attributes: {
       objectClass: 'person',
       cn: 'user1',
-      memberOf: 'cn=group1,cn=group,dc=example,dc=com',
+      memberOf: [
+        'cn=group1,dc=group,dc=example,dc=com',
+        'cn=groupA,dc=group,dc=example,dc=com'
+      ],
       title: 'user-title1',
       uid: 'user1',
       mail: 'user1@example',
@@ -27,7 +30,10 @@ const users = [
     attributes: {
       objectClass: 'person',
       cn: 'user2',
-      memberOf: 'cn=group2,dc=group,dc=example,dc=com',
+      memberOf: [
+        'cn=group2,dc=group,dc=example,dc=com',
+        'cn=groupB,dc=group,dc=example,dc=com'
+      ],
       title: 'user-title2',
       uid: 'user2',
       mail: 'user2@example',
