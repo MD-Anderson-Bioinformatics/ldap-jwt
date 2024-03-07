@@ -20,8 +20,13 @@ if (settings.ssl) {
 	var http = require('http');
 }
 
-app = require('express')();
+if (process.env.BASE_URL_PATH === undefined) {
+	logger.warn("BASE_URL_PATH environment variable not set. Using default 'ldap-jwt'.");
+	process.env.BASE_URL_PATH = "ldap-jwt";
+}
+const baseUrlPath = "/" + process.env.BASE_URL_PATH;
 
+app = require('express')();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(require('cors')());
@@ -42,7 +47,6 @@ if (settings.hasOwnProperty( 'ldap' ) && settings.hasOwnProperty( 'jwt' )) {
 	process.exit(1);
 }
 
-
 if (settings.hasOwnProperty( 'jwt' )) {
 	if (!settings.jwt.hasOwnProperty('timeout')) {
 		settings.jwt.timeout = 1;
@@ -56,7 +60,7 @@ if (settings.hasOwnProperty( 'jwt' )) {
 		settings.jwt.base64 ? new Buffer(settings.jwt.secret, 'base64') : settings.jwt.secret);
 }
 
-app.post('/ldap-jwt/authenticate', function (req, res) {
+app.post(baseUrlPath + '/authenticate', function (req, res) {
 	if(!req.body.username || !req.body.password) {
 		logger.warn("No username or password supplied in request");
 		res.status(400).send({error: 'No username or password supplied'});
@@ -75,7 +79,7 @@ app.post('/ldap-jwt/authenticate', function (req, res) {
 		});
 });
 
-app.post('/ldap-jwt/verify', function (req, res) {
+app.post(baseUrlPath + '/verify', function (req, res) {
 	if (!req.body.token) {
 		logger.warn("No token supplied in request");
 		res.status(400).send({error: 'No token supplied'});
@@ -94,8 +98,7 @@ app.post('/ldap-jwt/verify', function (req, res) {
 	}
 });
 
-// Health check endpoint
-app.get('/ldap-jwt/health', function (req, res) {
+app.get(baseUrlPath + '/health', function (req, res) {
 	res.status(200).send({message: 'OK'});
 });
 
@@ -107,9 +110,9 @@ if (settings.ssl) { // use httpS
 	    cert: fs.readFileSync("./ssl/server.crt"),
 	};
 	var server = https.createServer(options,app).listen(port,function(){
-		logger.info("Express server listening on port " + port + " using httpS");
+		logger.info("Server running. Base URL: https://localhost:" + port + baseUrlPath);
 		logger.info('JWT tokens will expire after ' + settings.jwt.timeout + ' ' + settings.jwt.timeout_units);
-		logger.info("LDAP url: " + settings.ldap.url);
+		logger.info("LDAP URL: " + settings.ldap.url);
 		if (settings.ldap.bindAsUser) {
 			logger.info("Will bind with authenticating user's credentials");
 		} else {
@@ -121,9 +124,9 @@ if (settings.ssl) { // use httpS
 	});
 } else { // use http
 	var server = http.createServer(app).listen(port,function(){
-		logger.info("Express server listening on port " + port + " using http");
+		logger.info("Server running. Base URL: http://localhost:" + port + baseUrlPath);
 		logger.info('JWT tokens will expire after ' + settings.jwt.timeout + ' ' + settings.jwt.timeout_units);
-		logger.info("LDAP url: " + settings.ldap.url);
+		logger.info("LDAP URL: " + settings.ldap.url);
 		if (settings.ldap.bindAsUser) {
 			logger.info("Will bind with authenticating user's credentials");
 		} else {
