@@ -81,15 +81,15 @@ function verifyHandler(token, authorized_groups) {
 			logger.warn("Verification failed: expired token for '" + decodedToken.user_name + "'");
 			return({httpStatus: 400, message: 'Access token has expired'});
 		} else if (authorized_groups != undefined) {
-			if (decodedToken.hasOwnProperty("user_authorized_groups") && ut.userInAuthorizedGroups(decodedToken.user_authorized_groups, req.body.authorized_groups)) {
+			if (decodedToken.hasOwnProperty("user_authorized_groups") && userInAuthorizedGroups(decodedToken.user_authorized_groups, authorized_groups)) {
 				logger.info("Token valid for '" + decodedToken.user_name + "', " +
 					"requested groups: '" + getGroupCN(authorized_groups) +
 					"', token groups: '" + getGroupCN(decodedToken.user_authorized_groups) + "'");
 				return({httpStatus: 200, decodedToken: decodedToken});
 			} else {
 				logger.warn("Invalid token: token/authorized group mismatch for user '" +
-					decodedToken.user_name + "', requested groups: '" + ut.getGroupCN(req.body.authorized_groups) +
-					"', token groups: '" + ut.getGroupCN(decodedToken.user_authorized_groups) + "'");
+					decodedToken.user_name + "', requested groups: '" + getGroupCN(authorized_groups) +
+					"', token groups: '" + getGroupCN(decodedToken.user_authorized_groups) + "'");
 				return({httpStatus: 401, message: 'User is not authorized'});
 			}
 		} else {
