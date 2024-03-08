@@ -1,0 +1,42 @@
+name: Node.js CI
+
+# run on push to branch v1.3.0_mary
+on:
+  push:
+    branches:
+      - v1.3.0_mary
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # most of these envs are used by setconfig to write config.json
+    env:
+      BUILD_TARGET: ci
+      CLIENT_ID: myclientid
+      CLIENT_SECRET: myclientsecret
+      LDAP: enabled
+      LDAPAUTH_BINDDN_PREFIX: "cn="
+      LDAPAUTH_BINDDN_SUFFIX: ",dc=example,dc=com"
+      LDAPAUTH_SEARCHBASE: "dc=example,dc=com"
+      LDAPAUTH_URL: ldap://localhost:3004
+      LOG_LEVEL: info
+      NODE_VERSION: 20.x
+      SSL: false
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup Node version ${{ env.NODE_VERSION }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+    - name: Install project dependencies
+      run: npm install
+      working-directory: ./app
+    - name: Show envs (debug)
+      run: env | sort
+      working-directory: ./app
+    - name: Write file config.json
+      run: ./setconfig
+      working-directory: ./app
+    - name: Run tests
+      run: npm test
+      working-directory: ./app
