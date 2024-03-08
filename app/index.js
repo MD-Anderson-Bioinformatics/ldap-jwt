@@ -6,7 +6,6 @@ logger.debug("Node version: "+process.version);
 logger.debug("Settings: " + JSON.stringify(settings, ut.hideSecretsAndLogger, 2));
 
 var bodyParser = require('body-parser');
-var jwt = require('jwt-simple');
 var fs = require('fs')
 
 if (settings.ssl) {

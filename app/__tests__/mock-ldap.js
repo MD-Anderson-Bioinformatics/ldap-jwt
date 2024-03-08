@@ -1,8 +1,7 @@
 "use strict";
 /*
-  This module is a mock LDAP server that can be used for testing purposes.
-  It is based on the ldap-server-mock package, which is a simple LDAP server
-  that can be used to test LDAP client applications.
+  This module is a mock LDAP server that can be used for testing purposes, based on
+  the ldap-server-mock package.
 
   It does not support actual authentication--the passwords are not checked.
 */

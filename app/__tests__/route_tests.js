@@ -9,9 +9,9 @@ const baseUrlPath = '/ldap-jwt';
 beforeAll(async () => {
   logger.info("Starting Mock LDAP server")
   await mockldap.startServer()
-}, 10000)
+})
 
-describe('Testing routes', () => {
+describe('Testing /health, /authenticate, and /verify endpoints', () => {
   test('health test', async() => {
     const res = await request(app).get(baseUrlPath + '/health');
     expect(res.statusCode).toEqual(200);

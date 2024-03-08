@@ -4,15 +4,16 @@ var moment = require('moment');
 var jwt = require('jwt-simple');
 
 /**
- * Authenticates a user and generates a token if the user is authenticated.
+ * Authenticates a user and if user is authenticated, generates a token
  *
  * @async
  * @param {string} username - The username of the user.
  * @param {string} password - The password of the user.
  * @param {Object} settings - The settings for the authentication.
  * @param {Array} authorized_groups - The groups that are authorized to authenticate.
- * @returns {Promise<Object>} A promise that resolves to an object containing the token and user information if the user
- * is authenticated, or rejects with an error message and HTTP status code if the user is not authenticated or an error occurs.
+ * @returns {Promise<Object>} A promise that resolves to an object containing the approriate HTTP response code, 
+ * token and user information if the user is authenticated, or rejects with an error message and HTTP status code
+ * if the user is not authenticated or an error occurs.
  */
 async function authenticateHandler(username, password, settings, authorized_groups) {
 	// First handle credentials and reject if invalid
@@ -60,7 +61,7 @@ async function authenticateHandler(username, password, settings, authorized_grou
 	})
 }
 /**
- * Verifies a JWT token and if authorized_groups supplied, checks if the user is part of the authorized groups.
+ * Verifies a JWT token. If authorized_groups supplied, verfication includes checking if token includes the authorized_groups.
  *
  * @param {string} token - The JWT token to verify.
  * @param {Array} authorized_groups - The groups that are authorized to authenticate.
@@ -71,6 +72,8 @@ function verifyHandler(token, authorized_groups) {
 	// first try/catch is for decoding the token
 	try {
 		var decodedToken = jwt.decode(token, app.get('jwtTokenSecret'));
+		var groupsInToken = decodedToken.user_authorized_groups;
+		var usernameInToken = decodedToken.user_name;
 	} catch (err) {
 		logger.warn("Error decoding token: " + err);
 		return({httpStatus: 401, message: 'User is not authorized'});
@@ -78,22 +81,22 @@ function verifyHandler(token, authorized_groups) {
 	// second try/catch is for verifying token is valid
 	try {
 		if (decodedToken.exp <= Date.now()) {
-			logger.warn("Verification failed: expired token for '" + decodedToken.user_name + "'");
+			logger.warn("Verification failed: expired token for '" + usernameInToken + "'");
 			return({httpStatus: 400, message: 'Access token has expired'});
 		} else if (authorized_groups != undefined) {
-			if (decodedToken.hasOwnProperty("user_authorized_groups") && userInAuthorizedGroups(decodedToken.user_authorized_groups, authorized_groups)) {
-				logger.info("Token valid for '" + decodedToken.user_name + "', " +
+			if (groupsInToken && userInAuthorizedGroups(groupsInToken, authorized_groups)) {
+				logger.info("Token valid for '" + usernameInToken + "', " +
 					"requested groups: '" + getGroupCN(authorized_groups) +
-					"', token groups: '" + getGroupCN(decodedToken.user_authorized_groups) + "'");
+					"', token groups: '" + getGroupCN(groupsInToken) + "'");
 				return({httpStatus: 200, decodedToken: decodedToken});
 			} else {
 				logger.warn("Invalid token: token/authorized group mismatch for user '" +
-					decodedToken.user_name + "', requested groups: '" + getGroupCN(authorized_groups) +
-					"', token groups: '" + getGroupCN(decodedToken.user_authorized_groups) + "'");
+					usernameInToken + "', requested groups: '" + getGroupCN(authorized_groups) +
+					"', token groups: '" + getGroupCN(groupsInToken) + "'");
 				return({httpStatus: 401, message: 'User is not authorized'});
 			}
 		} else {
-			logger.info("Token verified for '" + decodedToken.user_name + "'");
+			logger.info("Token verified for '" + usernameInToken + "'");
 			return({httpStatus: 200, decodedToken: decodedToken});
 		}
 	} catch (err) {
