@@ -2,18 +2,20 @@
 const logger = require('../logger');
 const request = require('supertest');
 const app = require('../index');
-const e = require('express');
+const mockldap = require('./mock-ldap')
 
 const baseUrlPath = '/ldap-jwt';
 
-describe('GET /health', () => {
+beforeAll(async () => {
+  logger.info("Starting Mock LDAP server")
+  await mockldap.startServer()
+}, 10000)
+
+describe('Testing routes', () => {
   test('health test', async() => {
     const res = await request(app).get(baseUrlPath + '/health');
     expect(res.statusCode).toEqual(200);
   });
-});
-
-describe('POST /authenticate and /verify', () => {
 
   test('valid user no groups', async() => {
     let res = await request(app).post(baseUrlPath + '/authenticate').send({
@@ -42,7 +44,7 @@ describe('POST /authenticate and /verify', () => {
     expect(res.statusCode).toEqual(400); // no token supplied
   });
 
-  // see mock-server.js for user's group membership
+  // see mock-ldap.js for user's group membership
 
   test('no group in token', async() => {
     let res = await request(app).post(baseUrlPath + '/authenticate').send({
@@ -129,5 +131,8 @@ describe('POST /authenticate and /verify', () => {
 });
 
 afterAll(async () => {
+  logger.info("Stopping Mock LDAP server")
+  await mockldap.stopServer();
+  logger.info("Stopping LDAP-JWT server")
   await app.close();
 })

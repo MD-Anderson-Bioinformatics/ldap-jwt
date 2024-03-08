@@ -6,7 +6,7 @@
 
   It does not support actual authentication--the passwords are not checked.
 */
-const logger = require('./logger');
+const logger = require('../logger');
 const lsm = require('ldap-server-mock');
 
 const users = [
