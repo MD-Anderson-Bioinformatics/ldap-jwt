@@ -26,6 +26,16 @@ USER ${NODE_USER}
 
 RUN npm install --omit=dev
 
+##
+## CI testing image
+##
+FROM base as ci
+
+USER ${NODE_USER}
+
+RUN npm install
+
+CMD ["npm", "test"]
 
 ##
 ## Development image with a few niceties

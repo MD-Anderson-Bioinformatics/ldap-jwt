@@ -11,7 +11,7 @@ services:
     container_name: ldap-jwt
     environment:
       - BASE_URL_PATH=${BASE_URL_PATH:-ldap-jwt} # Base path for URL
-      - BUILD_TARGET # used decide of `npm run devstart` or `npm start` in setconfig
+      - BUILD_TARGET # used in Dockerfile and setconfig
       - CLIENT_ID
       - CLIENT_SECRET
       - JWT_TIMEOUT
@@ -24,8 +24,8 @@ services:
       - LDAPAUTH_BINDDN_PREFIX
       - LDAPAUTH_BINDDN_SUFFIX
       - LDAPAUTH_SEARCHBASE
-      - LDAPAUTH_URL
-      - LOG_LEVEL
+      - LDAPAUTH_URL ## URL of LDAP server
+      - LOG_LEVEL=${LOG_LEVEL:-info}
       - PORT=${PORT:-3000}
       - SSL=${SSL:-true}
     #volumes:
