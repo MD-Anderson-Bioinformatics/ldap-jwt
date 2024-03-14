@@ -1,0 +1,39 @@
+{
+  "name": "ldap-jwt",
+  "version": "1.3.0",
+  "description": "Lightweight node.js based web service that provides user authentication against LDAP server (Active Directory / Windows network) credentials and returns a JSON Web Token.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js | ./node_modules/.bin/bunyan -o short",
+    "devstart": "nodemon index.js | ./node_modules/.bin/bunyan -o short",
+    "test": "jest --coverage --detectOpenHandles --forceExit"
+  },
+  "keywords": [
+    "ldap",
+    "jwt"
+  ],
+  "author": "Lucian Weber <lucian@weber.xyz>",
+  "license": "MIT",
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "bunyan": "^1.8.15",
+    "bunyan-format": "^0.2.1",
+    "cors": "2.8.3",
+    "express": "^4.18.2",
+    "jwt-simple": "^0.5.6",
+    "ldapauth-fork": "^5.0.5",
+    "moment": "^2.29.4",
+    "promise": "^7.1.1"
+  },
+  "devDependencies": {
+    "jest": "^29.5.0",
+    "ldap-server-mock": "^6.0.1",
+    "nodemon": "^3.1.0",
+    "supertest": "^6.3.4"
+  },
+  "jest": {
+    "testPathIgnorePatterns": [
+      "mock-ldap.js"
+    ]
+  }
+}

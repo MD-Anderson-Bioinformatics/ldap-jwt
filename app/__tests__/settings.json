@@ -1,0 +1,26 @@
+{
+  "ldap": {
+    "searchBase": "dc=example,dc=com",
+    "binddn_prefix": "cn=",
+    "binddn_suffix": ",dc=example,dc=com",
+    "url": "ldap://localhost:3004",
+    "timeout": 5000,
+    "searchAttributes": [
+      "uid",
+      "mail",
+      "displayName",
+      "memberOf"
+    ],
+    "reconnect": true,
+    "connectTimeout": 10000,
+    "searchFilter": "(CN={{username}})",
+    "enabled": true
+  },
+  "jwt": {
+    "clientid": "mock-ldap-jst-service",
+    "secret": "mysecret",
+    "base64": false,
+    "timeout": 2,
+    "timeout_units": "days"
+  }
+}

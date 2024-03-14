@@ -1,0 +1,35 @@
+version: "3.7"
+
+services:
+  ldap-jwt:
+    build:
+      context: .
+      target: ${BUILD_TARGET:-prod}
+      args:
+        PORT: ${PORT:-3000}
+    image: ${IMAGE:-ldap-jwt}:${TAG:-latest}
+    container_name: ldap-jwt
+    environment:
+      - BASE_URL_PATH=${BASE_URL_PATH:-ldap-jwt} # Base path for URL
+      - BUILD_TARGET # used in Dockerfile and setconfig
+      - CLIENT_ID
+      - CLIENT_SECRET
+      - JWT_TIMEOUT
+      - JWT_TIMEOUT_UNITS
+      - LDAP
+      # Uncomment these (and comment out LDAPAUTH_BINDDN_PREFIX and LDAPAUTH_BINDDN_SUFFIX)
+      # to use service accout to bind to LDAP
+      #- LDAPAUTH_BINDCREDENTIALS
+      #- LDAPAUTH_BINDDN
+      - LDAPAUTH_BINDDN_PREFIX
+      - LDAPAUTH_BINDDN_SUFFIX
+      - LDAPAUTH_SEARCHBASE
+      - LDAPAUTH_URL ## URL of LDAP server
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - PORT=${PORT:-3000}
+      - SSL=${SSL:-true}
+    #volumes:
+    # mount current directory (to facilitate development only)
+    #  - ${PWD}/app:/usr/src/app
+    ports:
+      - ${PORT:-3000}:${PORT:-3000}

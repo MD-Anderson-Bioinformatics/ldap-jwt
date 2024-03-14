@@ -4,25 +4,67 @@
 error=0
 
 if [ "X${LDAP}" = Xenabled ] ; then
-if [ "X${LDAPAUTH_URL}" = X ] ; then
-   >&2 echo Error: LDAP is enabled, but LDAPAUTH_URL is not defined
-   error=1
-fi
-if [ "X${LDAPAUTH_BINDDN}" = X ] ; then
-   >&2 echo Warning: LDAP is enabled, but LDAPAUTH_BINDDN is not defined
-fi
-if [ "X${LDAPAUTH_BINDCREDENTIALS}" = X ] ; then
-   >&2 echo Error: LDAP is enabled, but LDAPAUTH_BINDCREDENTIALS is not defined
-   error=1
-fi
-if [ "X${LDAPAUTH_SEARCHBASE}" = X ] ; then
-   >&2 echo Error: LDAP is enabled, but LDAPAUTH_SEARCHBASE is not defined
-   error=1
-fi
-if [ "X${CLIENT_ID}" = X ] ; then
-   >&2 echo Error: LDAP is enabled, but CLIENT_ID is not defined
-   error=1
-fi
+  >&2 echo LDAP is enabled
+  if [ "X${LDAPAUTH_URL}" = X ] ; then
+    >&2 echo Error: LDAP is enabled, but LDAPAUTH_URL is not defined
+    error=1
+  fi
+
+  ## Check for conflicting configurations.
+  if [[ "${LDAPAUTH_BINDDN}" && "${LDAPAUTH_BINDCREDENTIALS}" ]]; then # using BINDDN to bind to LDAP
+    >&2 echo Binds to LDAP will use LDAP_BINDDN and LDAP_BINDCREDENTIALS
+    if [ -v LDAPAUTH_BINDDN_PREFIX ] ; then # so LDAPAUTH_BINDDN_PREFIX should not be defined
+      >&2 echo Error: Conflicting configurations: LDAPAUTH_BINDDN, LDAPAUTH_BINDCREDENTIALS and LDAPAUTH_BINDDN_PREFIX are all defined.
+      exit 0
+    fi
+    if [ -v LDAPAUTH_BINDDN_SUFFIX ] ; then # so LDAPAUTH_BINDDN_SUFFIX should not be defined
+      >&2 echo Error: Conflicting configurations: LDAPAUTH_BINDDN, LDAPAUTH_BINDCREDENTIALS and LDAPAUTH_BINDDN_SUFFIX are all defined.
+      exit 0
+    fi
+  fi
+  if [[ -v LDAPAUTH_BINDDN_PREFIX && -v LDAPAUTH_BINDDN_SUFFIX ]]; then # using authenticating user to bind to LDAP
+    >&2 echo Binds to LDAP will use distinguished name: LDAP_BINDDN_PREFIX + \<authenticating username\> + LDAP_BINDDN_SUFFIX
+    if [ "${LDAPAUTH_BINDDN}" ] ; then # so LDAPAUTH_BINDDN should not be defined
+      >&2 echo Error: Conflicting configurations: LDAPAUTH_BINDDN_PREFIX, LDAPAUTH_BINDDN_SUFFIX and LDAPAUTH_BINDDN are all defined.
+      exit 0
+    fi
+    if [ "${LDAPAUTH_BINDCREDENTIALS}" ] ; then # so LDAPAUTH_BINDCREDENTIALS should not be defined
+      >&2 echo Error: Conflicting configurations: LDAPAUTH_BIND_PREFIX, LDAPAUTH_BINDDN_SUFFIX and LDAPAUTH_BINDCREDENTIALS are all defined.
+      exit 0
+    fi
+  fi
+
+  ## If LDAPAUTH_BINDDN and LDAPAUTH_BINDCREDENTIALS are defined, then configuring to bind to LDAP using BINDDN.
+  ## So make sure if one is defined, then the other is also defined.
+  if [[ "${LDAPAUTH_BINDDN}" && -z "${LDAPAUTH_BINDCREDENTIALS}" ]]; then
+    >&2 echo Error: LDAPAUTH_BINDDN is defined but LDAPAUTH_BINDCREDENTIALS is unset or empty.
+    exit 0
+  fi
+  if [[ "${LDAPAUTH_BINDCREDENTIALS}" && -z "${LDAPAUTH_BINDDN}" ]]; then
+    >&2 echo Error: LDAPAUTH_BINDCREDENTIALS is defined but LDAPAUTH_BINDDN is unset or empty.
+    exit 0
+  fi
+
+  ## If LDAPAUTH_BINDDN_PREFIX and LDAPAUTH_BINDDN_SUFFIX are defined, then configuring to bind to LDAP using authenticating user.
+  ## So make sure if one is defined, then the other is also defined. Both can be empty.
+  if [[ -v LDAPAUTH_BINDDN_PREFIX && ! -v LDAPAUTH_BINDDN_SUFFIX ]]; then
+    >&2 echo Error: LDAPAUTH_BINDDN_PREFIX is defined but LDAPAUTH_BINDDN_SUFFIX is not.
+    exit 0
+  fi
+  if [[ -v LDAPAUTH_BINDDN_SUFFIX && ! -v LDAPAUTH_BINDDN_PREFIX ]]; then
+    >&2 echo Error: LDAPAUTH_BINDDN_SUFFIX is defined but LDAPAUTH_BINDDN_PREFIX is not.
+    exit 0
+  fi
+  ## Check for conflicting configurations.
+
+  if [ -z "${LDAPAUTH_SEARCHBASE}" ] ; then
+    >&2 echo Error: LDAP is enabled, but LDAPAUTH_SEARCHBASE is not defined
+    error=1
+  fi
+  if [ "X${CLIENT_ID}" = X ] ; then
+    >&2 echo Error: LDAP is enabled, but CLIENT_ID is not defined
+    error=1
+  fi
 fi
 
 if [ "X${AUTH0DOMAIN}" != X -a "X${CLIENT_ID}" = X ] ; then
@@ -42,16 +84,16 @@ fi
 
 ##### END Error checking
 
-# Redirect following echos to config file.
+# Redirect following echos to JSON config file.
 {
 
 echo "{"
 
 # Output LDAP config if defined.
 if [ "X${LDAP}" = Xenabled ] ; then
->&2 echo LDAP is enabled
-echo '  "ldap": {'
-env | awk '
+  >&2 echo LDAP is enabled
+  echo '  "ldap": {'
+  env | awk '
     BEGIN {
         q="\"";
         # Fix case of config options per https://github.com/vesse/node-ldapauth-fork
@@ -122,17 +164,16 @@ env | awk '
             print "    " q var q ": " vq def[var] vq ",";
         }
     }'
-echo '    "enabled": true'
-if [ "X${CLIENT_ID}" = X ] ; then
+  echo '    "enabled": true'
+  if [ "X${CLIENT_ID}" = X ] ; then
     echo '  }'
-else
+  else
     echo '  },'
 fi
 fi
 
 # Output JWT config if defined.
 if [ "X${CLIENT_ID}" != X ] ; then
->&2 echo JWT is enabled
 sed -e "s/CLIENT_ID/${CLIENT_ID}/" \
     -e "s/CLIENT_SECRET/${CLIENT_SECRET}/" \
     -e "s/SECRET_BASE64/${SECRET_BASE64:-false}/" \
@@ -141,7 +182,7 @@ sed -e "s/CLIENT_ID/${CLIENT_ID}/" \
 << HERE
 	"jwt": {
                 "clientid": "CLIENT_ID",
-		"secret": "CLIENT_SECRET",
+                "secret": "CLIENT_SECRET",
                 "base64": SECRET_BASE64,
                 "timeout": JWT_TIMEOUT,
                 "timeout_units": "JWT_TIMEOUT_UNITS"
@@ -149,15 +190,8 @@ sed -e "s/CLIENT_ID/${CLIENT_ID}/" \
 HERE
 fi
 
-# If env DEBUG defined, turn on debugging
-if [ "X${DEBUG}" != X ] ; then
->&2 echo DEBUG is enabled
- echo ' ,
-	"debug": "true"'
-fi
-
-# If env SSL defined, use SSL
-if [ "X${SSL}" != X ] ; then
+# If env SSL is not 'falsey', use SSL (e.g. httpS)
+if [[ ${SSL} && ${SSL} != 0 && ${SSL} != "false" && ${SSL} != "FALSE" && ${SSL} != "False" ]]; then
 >&2 echo Using SSL
  echo ' ,
 	"ssl": "true"'
@@ -166,11 +200,21 @@ fi
 echo "}"
 
 
-# End redirection.
+# End redirection to config file
 } > config/config.json
 
-# Execute server
-exec npm start
+if [ "${BUILD_TARGET}" == "dev" ] ; then
+  echo "Wrote file: config.json for DEVELOPMENT build."
+  echo "Starting server for deveopment (requires devDependency nodemon)"
+  exec npm run devstart
+elif [ "${BUILD_TARGET}" == "ci" ] ; then
+  echo "Wrote file: config.json for CI build. Exiting"
+  exit 0
+else
+  echo "Wrote file: config.json for PRODUCTION build."
+  echo "Starting server for production"
+  exec npm start
+fi
 
 # Should not happen.  Use exit code 0 to prevent container restart.
 exit 0

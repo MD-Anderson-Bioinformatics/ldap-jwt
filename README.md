@@ -1,17 +1,12 @@
-# Simple "ldap-jwt" service
+# LDAP-JWT Server
+
 Lightweight node.js based web service that provides user authentication against LDAP server (Active Directory / Windows network) credentials and returns a JSON Web Token.
 
-Heavily based on the work of [gregfroese/ldapservice](https://github.com/gregfroese/ldapservice).
+## Features
 
-
-## Changes
-
-* Replaced yaml config-files with json
-* Removed support for RabbitMQ
-* Updated npm dependencies
-* Simplified endpoints
-* Added option to use SSL (httpS) 
-* Added option to specify authorized groups
+* Options to specify authorized groups in /authenticate, /verify
+* Option to bind either as the user attempting to authenticate or a service accout
+* Option to use SSL (httpS)
 
 
 ## Usage
@@ -19,38 +14,44 @@ Heavily based on the work of [gregfroese/ldapservice](https://github.com/gregfro
 
 #### 1. Configuration variables
 
-Place configuration variables in .env file. Example:
+Place configuration variables in .env file. Below is an example:
 
 ```bash
 LDAP=enabled
 LDAPAUTH_URL=ldaps://hostname
-LDAPAUTH_BINDCREDENTIALS=secret
 LDAPAUTH_SEARCHBASE=dc=example,dc=com
-LDAPAUTH_BINDDN=cn=bind_user,dc=examle,dc=com
-CLIENT_ID=test-client-id
-CLIENT_SECRET=test-client-secret
-DEBUG=true  ## <-- turns on debugging
+## If LDAPAUTH_BINDDN and LDAPAUTH_BINDCREDENTIALS are given,
+## they will be used for binding to Active Directory.
+LDAPAUTH_BINDDN=cn=binding,dc=example,dc=com
+LDAPAUTH_BINDCREDENTIALS=secret
+## Otherwise, authenticating user and corresponding credentials will be
+## used to bind. LDAPAUTH_BINDDN_PREFIX and LDAPAUTH_BINDDN_SUFFIX must
+## then be specified to flesh out the
+## distinguished name (DN) of the user. For example:
+# LDAPAUTH_BINDDN_PREFIX="cn="
+# LDAPAUTH_BINDDN_SUFFIX=",ou=people,dc=example,dc=com"
+CLIENT_ID=myclientid
+CLIENT_SECRET=mysecret
 SSL=true ## <-- turns on SSL (httpS)
 ```
 
 #### 2. SSL Certificates
 
-If setting SSL=true, generate / obtain SSL certificates, and place the .crt and .key files in an 'ssl' directory at the top-level of the directory: ssl/server.key and ssl/server.crt
+If setting SSL=true, generate / obtain SSL certificates, and place the .crt and .key files in an 'ssl' directory under app: app/ssl/server.key and app/ssl/server.crt
 
 
-#### 3. Build image
+#### 3. Docker compose
 
-```bash
-$ docker build -t ldap_jwt .
-```
-
-#### 4. Start container
+See the docker-compose.yml file for configurations.
 
 ```bash
-$ docker run -p 3000:3000 --rm -it --env-file .env --name ldap-jwt ldap_jwt
+## build image:
+docker compose build
+## start container:
+docker compose up
 ```
 
-#### 5. Verify server is running
+#### 4. Verify server is running
 
 Request with username and password:
 
@@ -64,18 +65,15 @@ Request with username and password with authorized group (only allows access if 
 $ curl -k -d '{"username":"<username>","password":"<password>","authorized_groups":[<authorized group]}' -H "Content-Type: application/json" -X POST "https://<hostname>/ldap-jwt/authenticate"
 ```
 
-#### 6. Run tests
+## Test Suite
 
-The README in the tests directory describes the setup and procedure for running tests. 
-
-For quick help:
+Tests are written with [jest](https://www.npmjs.com/package/jest) and [supertest](https://www.npmjs.com/package/supertest). They can be run by setting the BUILD_TARGET environment variable to 'ci', building the image, and starting the container. Container exit status `0` indicates all tests passed.
 
 ```bash
-cd tests
-python3 unitTests.py --help
+docker compose build
+docker compose up
 ```
 
-TODO: write these tests in node (instead of python)
 
 ## Endpoints
 
