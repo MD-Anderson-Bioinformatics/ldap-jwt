@@ -11,12 +11,12 @@ services:
     container_name: ldap-jwt
     environment:
       - BASE_URL_PATH=${BASE_URL_PATH:-ldap-jwt} # Base path for URL
-      - BUILD_TARGET # used in Dockerfile and setconfig
+      - BUILD_TARGET=${BUILD_TARGET:-prod} # used in Dockerfile and setconfig
       - CLIENT_ID
       - CLIENT_SECRET
-      - JWT_TIMEOUT
-      - JWT_TIMEOUT_UNITS
-      - LDAP
+      - JWT_TIMEOUT=${JWT_TIMEOUT:-2}
+      - JWT_TIMEOUT_UNITS=${JWT_TIMEOUT_UNITS:-days}
+      - LDAP=${LDAP:-enabled}
       # Uncomment these (and comment out LDAPAUTH_BINDDN_PREFIX and LDAPAUTH_BINDDN_SUFFIX)
       # to use service accout to bind to LDAP
       #- LDAPAUTH_BINDCREDENTIALS
