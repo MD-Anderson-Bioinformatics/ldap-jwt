@@ -43,9 +43,9 @@ const authenticate_url = `${argv.base_url}/ldap-jwt/authenticate`;
 const verify_url = `${argv.base_url}/ldap-jwt/verify`;
 
 
-// Create an https agent to allow self-signed certificates (if rejectUnauthorized is false)
+// Create an https agent in order to allow this script to POST to an ldap-jwt instance that has a self-signed certificate
 const agent = new https.Agent({
-  rejectUnauthorized: argv.check_cert
+  rejectUnauthorized: argv.check_cert // If ldap-jwt instance has self-singed cert, set input param check_cert = 'false'
 });
 
 // Post to /authenticate and if successful, post to /verify
