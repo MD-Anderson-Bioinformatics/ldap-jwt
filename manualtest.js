@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 //
-// Script to test the ldap-jwt authentication and verification endpoints.
+// Script to test the ldap-jwt /authenticate and /verify endpoints.
 // To see argument list:
 //  node deploytest.js --help
 //
@@ -68,7 +68,6 @@ axios.post(authenticate_url, data, { validateStatus: false, httpsAgent: agent })
           }
         })
     } else {
-      // log keys of response object
       console.error(`ERROR: Authenticate request failed with status code ${response.status}`);
       console.error(`ERROR:     statusText: ${response.statusText}`);
       console.error(`ERROR:     Message: ${response.data.error}`);
