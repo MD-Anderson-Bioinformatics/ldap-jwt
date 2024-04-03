@@ -2,7 +2,7 @@
 //
 // Script to test the ldap-jwt /authenticate and /verify endpoints.
 // To see argument list:
-//  node deploytest.js --help
+//  node manualtest.js --help
 //
 const axios = require('axios');
 const https = require('https');
