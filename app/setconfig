@@ -205,7 +205,7 @@ echo "}"
 
 if [ "${BUILD_TARGET}" == "dev" ] ; then
   echo "Wrote file: config.json for DEVELOPMENT build."
-  echo "Starting server for deveopment (requires devDependency nodemon)"
+  echo "Starting server for development (requires devDependency nodemon)"
   exec npm run devstart
 elif [ "${BUILD_TARGET}" == "ci" ] ; then
   echo "Wrote file: config.json for CI build. Exiting"
