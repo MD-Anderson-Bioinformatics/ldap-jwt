@@ -18,6 +18,7 @@ Place configuration variables in .env file. Below is an example:
 
 ```bash
 LDAP=enabled
+LDAP_SEARCHFILTER=(cn={{username}})
 LDAPAUTH_URL=ldaps://hostname
 LDAPAUTH_SEARCHBASE=dc=example,dc=com
 ## If LDAPAUTH_BINDDN and LDAPAUTH_BINDCREDENTIALS are given,

@@ -55,10 +55,13 @@ if [ "X${LDAP}" = Xenabled ] ; then
     >&2 echo Error: LDAPAUTH_BINDDN_SUFFIX is defined but LDAPAUTH_BINDDN_PREFIX is not.
     exit 0
   fi
-  ## Check for conflicting configurations.
 
   if [ -z "${LDAPAUTH_SEARCHBASE}" ] ; then
     >&2 echo Error: LDAP is enabled, but LDAPAUTH_SEARCHBASE is not defined
+    error=1
+  fi
+  if [ -z "${LDAP_SEARCHFILTER}" ] ; then
+    >&2 echo Error: LDAP is enabled, but LDAP_SEARCHFILTER is not defined
     error=1
   fi
   if [ "X${CLIENT_ID}" = X ] ; then
@@ -146,7 +149,7 @@ if [ "X${LDAP}" = Xenabled ] ; then
         def["timeout"] = "5000";
         def["connectTimeout"] = "10000";
         def["reconnect"] = "true";
-        def["searchFilter"] = "(CN={{username}})";
+        def["searchFilter"] = "'${LDAP_SEARCHFILTER}'";
         def["searchAttributes"] = "[\"uid\", \"mail\", \"displayName\", \"memberOf\"]";
 
     }
