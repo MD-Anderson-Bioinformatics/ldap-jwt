@@ -18,6 +18,7 @@ Place configuration variables in .env file. Below is an example:
 
 ```bash
 LDAP=enabled
+LDAP_SEARCHFILTER=(cn={{username}})
 LDAPAUTH_URL=ldaps://hostname
 LDAPAUTH_SEARCHBASE=dc=example,dc=com
 ## If LDAPAUTH_BINDDN and LDAPAUTH_BINDCREDENTIALS are given,
@@ -208,3 +209,15 @@ In this example, the JWT payload contains an encoded authorized\_groups key with
 ```
 
 In the response, the user\_authorized\_groups list is the intersection of the "authorized_groups" in the original request made to generate the token and the user's groups in LDAP.
+
+### /ldap-jwt/health
+
+A 'health check' endpoint that accepts GET requests and returns a 200 status and JSON message if the server is running.
+
+*Response:*
+
+```
+{
+  "message": "OK"
+}
+```

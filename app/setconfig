@@ -55,11 +55,14 @@ if [ "X${LDAP}" = Xenabled ] ; then
     >&2 echo Error: LDAPAUTH_BINDDN_SUFFIX is defined but LDAPAUTH_BINDDN_PREFIX is not.
     exit 0
   fi
-  ## Check for conflicting configurations.
 
   if [ -z "${LDAPAUTH_SEARCHBASE}" ] ; then
     >&2 echo Error: LDAP is enabled, but LDAPAUTH_SEARCHBASE is not defined
     error=1
+  fi
+  if [ -z "${LDAP_SEARCHFILTER}" ] ; then
+    >&2 echo WARNING: LDAP is enabled, but LDAP_SEARCHFILTER is not defined. Using default: '(CN={{username}})'
+    export LDAP_SEARCHFILTER="(CN={{username}})"
   fi
   if [ "X${CLIENT_ID}" = X ] ; then
     >&2 echo Error: LDAP is enabled, but CLIENT_ID is not defined
@@ -146,7 +149,7 @@ if [ "X${LDAP}" = Xenabled ] ; then
         def["timeout"] = "5000";
         def["connectTimeout"] = "10000";
         def["reconnect"] = "true";
-        def["searchFilter"] = "(CN={{username}})";
+        def["searchFilter"] = "'${LDAP_SEARCHFILTER}'";
         def["searchAttributes"] = "[\"uid\", \"mail\", \"displayName\", \"memberOf\"]";
 
     }
@@ -205,7 +208,7 @@ echo "}"
 
 if [ "${BUILD_TARGET}" == "dev" ] ; then
   echo "Wrote file: config.json for DEVELOPMENT build."
-  echo "Starting server for deveopment (requires devDependency nodemon)"
+  echo "Starting server for development (requires devDependency nodemon)"
   exec npm run devstart
 elif [ "${BUILD_TARGET}" == "ci" ] ; then
   echo "Wrote file: config.json for CI build. Exiting"
