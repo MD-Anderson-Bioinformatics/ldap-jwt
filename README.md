@@ -209,3 +209,15 @@ In this example, the JWT payload contains an encoded authorized\_groups key with
 ```
 
 In the response, the user\_authorized\_groups list is the intersection of the "authorized_groups" in the original request made to generate the token and the user's groups in LDAP.
+
+### /ldap-jwt/health
+
+A 'health check' endpoint that accepts GET requests and returns a 200 status and JSON message if the server is running.
+
+*Response:*
+
+```
+{
+  "message": "OK"
+}
+```
