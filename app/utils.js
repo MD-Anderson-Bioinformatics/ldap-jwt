@@ -267,6 +267,7 @@ let bind = async function (username, password, settings) {
 			if (settings.ldap.bindAsUser) {
 				settingsForBind.bindCredentials = password;
 				settingsForBind.bindDn = settings.ldap.binddn_prefix + username + settings.ldap.binddn_suffix;
+				logger.debug("Binding info: " + JSON.stringify(settingsForBind, hideSecretsAndLogger, 4));
 			} else {
 				settingsForBind.bindCredentials = settings.ldap.bindCredentials;
 				settingsForBind.bindDn = settings.ldap.bindDn;
