@@ -61,8 +61,8 @@ if [ "X${LDAP}" = Xenabled ] ; then
     error=1
   fi
   if [ -z "${LDAP_SEARCHFILTER}" ] ; then
-    >&2 echo Error: LDAP is enabled, but LDAP_SEARCHFILTER is not defined
-    error=1
+    >&2 echo WARNING: LDAP is enabled, but LDAP_SEARCHFILTER is not defined. Using default: '(CN={{username}})'
+    export LDAP_SEARCHFILTER="(CN={{username}})"
   fi
   if [ "X${CLIENT_ID}" = X ] ; then
     >&2 echo Error: LDAP is enabled, but CLIENT_ID is not defined
