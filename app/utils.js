@@ -161,10 +161,10 @@ function getGroupCN(groups) {
   }
   try {
     if (typeof groups === "string") {
-      return groups.split(",")[0].split("=")[1];
+      return getCommonName(groups);
     } else {
       return groups.map(function (group) {
-        return group.split(",")[0].split("=")[1];
+        return getCommonName(group);
       });
     }
   } catch (e) {
@@ -187,7 +187,11 @@ function getGroupCN(groups) {
 async function queryAuthentication(username, password, settings) {
   let auth = await bind(username, password, settings);
   return new Promise(function (resolve, reject) {
-    auth.authenticate(username, password, async function (err, user) {
+    let authenticateName = username;
+    if (isDistinguishedName(username)) { // typically, the LDAP search filter prevents authenticating with DN
+      authenticateName = getCommonName(username);
+    }
+    auth.authenticate(authenticateName, password, async function (err, user) {
       await unbind(auth, settings);
       if (err) {
         logger.warn("Authentication error: ", err);
@@ -278,15 +282,24 @@ let userGroupAuthGroupIntersection = function (userGroups, authorized_groups) {
 };
 
 /**
- * Binds a user with given username and password to the LDAP server.
+ * Creates a new LDAP bind using the provided username, password, and settings.
  *
- * @private
+ * This function creates a new LDAP bind configuration based on the provided settings.
+ * If `settings.ldap.bindAsUser` is true, it uses the provided username and password for binding.
+ * Otherwise, it uses the default bind credentials from `settings`.
+ *
  * @async
- * @param {string} username - The username of the user.
- * @param {string} password - The password of the user.
- * @param {Object} settings - The settings for the LDAP server and binding options.
- * @returns {Promise<Object>} A promise that resolves with the LDAPAuth object if binding is successful, or rejects
- * if an error occurs during binding.
+ * @private
+ * @param {string} username - The username to bind with.
+ * @param {string} password - The password to bind with.
+ * @param {Object} settings - The settings for the LDAP bind.
+ * @param {Object} settings.ldap - The LDAP settings.
+ * @param {boolean} settings.ldap.bindAsUser - Whether to bind as the user.
+ * @param {string} settings.ldap.binddn_prefix - The prefix for the bind DN. E.g. "CN=". Use if `bindAsUser` is true.
+ * @param {string} settings.ldap.binddn_suffix - The suffix for the bind DN. E.g. ",OU=Users,DC=example,DC=com". Use if `bindAsUser` is true.
+ * @param {string} settings.ldap.bindCredentials - The default bind credentials. Use if `bindAsUser` is false.
+ * @param {string} settings.ldap.bindDn - The default bind DN. Use if `bindAsUser` is false.
+ * @returns {Promise<LdapAuth>} - A promise that resolves to an LdapAuth instance.
  */
 let bind = async function (username, password, settings) {
   return new Promise(function (resolve, reject) {
@@ -295,8 +308,12 @@ let bind = async function (username, password, settings) {
       settingsForBind.log = logger; // adding bunyan logger to LdapAuth settings
       if (settings.ldap.bindAsUser) {
         settingsForBind.bindCredentials = password;
-        settingsForBind.bindDn =
-          settings.ldap.binddn_prefix + username + settings.ldap.binddn_suffix;
+        if (isDistinguishedName(username)) { // e.g. CN=JohnDoe,OU=Users,DC=example,DC=com
+          settingsForBind.bindDn = username;
+        } else {
+          settingsForBind.bindDn =
+            settings.ldap.binddn_prefix + username + settings.ldap.binddn_suffix;
+        }
         logger.debug("Binding info: " + JSON.stringify(settingsForBind, hideSecretsAndLogger, 4));
       } else {
         settingsForBind.bindCredentials = settings.ldap.bindCredentials;
@@ -353,6 +370,39 @@ let userInAuthorizedGroups = function (userGroups, authorized_groups) {
     throw "Unable to determine if user in authorized groups";
   }
 };
+
+/**
+ * Checks if the given username is a Distinguished Name (DN) according to RFC 2253.
+ *
+ * A Distinguished Name is a string composed of key=value pairs separated by commas,
+ * such as "CN=JohnDoe,OU=Users,DC=example,DC=com".
+ *
+ * @private
+ * @param {string} username - The username to check.
+ * @returns {boolean} - Returns true if the username matches the RFC 2253 DN format, otherwise false.
+ */
+let isDistinguishedName = function (username) {
+  const rfc2253Regex = /^([a-zA-Z]+=[^,]+,)*[a-zA-Z]+=[^,]+$/; // e.g. CN=JohnDoe,OU=Users,DC=example,DC=com
+  if (username.match(rfc2253Regex)) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Extracts the Common Name (CN) from a Distinguished Name (DN).
+ *
+ * A Distinguished Name is a string composed of key=value pairs separated by commas,
+ * such as "CN=JohnDoe,OU=Users,DC=example,DC=com". This function extracts the value
+ * associated with the "CN" key.
+ *
+ * @private
+ * @param {string} dn - The Distinguished Name (DN) from which to extract the Common Name (CN).
+ * @returns {string} - The extracted Common Name (CN).
+ */
+let getCommonName = function (dn) {
+  return dn.split(",")[0].split("=")[1];
+}
 
 module.exports = {
   authenticateHandler: authenticateHandler,

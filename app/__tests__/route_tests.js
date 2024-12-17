@@ -30,6 +30,19 @@ describe('Testing /health, /authenticate, and /verify endpoints', () => {
     expect(res.statusCode).toEqual(200); // valid token, so verify should pass
   });
 
+  test('valid user no groups, using distinguished name', async() => {
+    let res = await request(app).post(baseUrlPath + '/authenticate').send({
+      username: 'cn=user1,dc=example,dc=com',
+      password: 'password1'
+    });
+    expect(res.statusCode).toEqual(200); // valid user, so authenticate should pass
+    let token = res.body.token;
+    res = await request(app).post(baseUrlPath + '/verify').send({
+      token: token
+    });
+    expect(res.statusCode).toEqual(200); // valid token, so verify should pass
+  });
+
   test('invalid user', async() => {
     let res = await request(app).post(baseUrlPath + '/authenticate').send({
       username: 'user-not-in-database',
