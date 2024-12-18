@@ -27,9 +27,11 @@ async function authenticateHandler(username, password, settings, authorized_grou
       ) {
         logger.warn("InvalidCredentialsError for '" + username + "'");
         reject({ httpStatus: 401, message: "Wrong username or password" });
+        return;
       } else {
         logger.error("Error from authenticate promise: ", err);
         reject({ httpStatus: 500, message: "Sorry about that! Unexpected Error." });
+        return;
       }
     });
   }
@@ -41,11 +43,13 @@ async function authenticateHandler(username, password, settings, authorized_grou
         if (!user.hasOwnProperty("memberOf")) {
           logger.error("Server not configured for authorized_group verification");
           reject({ httpStatus: 500, message: "Unexpected error. Sorry about that!" });
+          return;
         }
         var userGroupsForPayload = userGroupAuthGroupIntersection(user.memberOf, authorized_groups);
         if (!userInAuthorizedGroups(user.memberOf, authorized_groups)) {
           logger.warn(user.displayName + "' not in '" + getGroupCN(authorized_groups) + "'");
           reject({ httpStatus: 401, message: "User is not authorized" });
+          return;
         }
       }
       let token = generateToken(user, settings, userGroupsForPayload);
@@ -56,11 +60,14 @@ async function authenticateHandler(username, password, settings, authorized_grou
           "Request included authorized_groups, but server not configured for authorized_group verification"
         );
         reject({ httpStatus: 401, message: "User is not authorized" });
+        return;
       } else if (err == "User not in authorized_groups") {
         reject({ httpStatus: 401, message: "User is not authorized" });
+        return;
       } else {
         logger.error("Error from authenticate promise: ", err);
         reject({ httpStatus: 500, message: "Unexpected Error. Sorry about that!" });
+        return;
       }
     }
   });
@@ -196,9 +203,11 @@ async function queryAuthentication(username, password, settings) {
       if (err) {
         logger.warn("Authentication error: ", err);
         reject(err);
+        return;
       } else if (!user) {
         logger.debug("ERROR: Reject because no user");
         reject();
+        return;
       } else {
         resolve(user);
       }
@@ -324,6 +333,7 @@ let bind = async function (username, password, settings) {
     } catch (err) {
       logger.error("Error creating new bind: ", err);
       reject();
+      return;
     }
   });
 };
@@ -345,6 +355,7 @@ let unbind = async function (auth, settings) {
     } catch (err) {
       logger.error("Error unbinding: ", err);
       reject();
+      return;
     }
   });
 };
