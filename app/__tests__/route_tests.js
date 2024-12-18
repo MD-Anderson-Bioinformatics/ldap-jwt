@@ -43,6 +43,48 @@ describe('Testing /health, /authenticate, and /verify endpoints', () => {
     expect(res.statusCode).toEqual(200); // valid token, so verify should pass
   });
 
+  test('valid service account, using distinguished name', async() => {
+    let res = await request(app).post(baseUrlPath + '/authenticate').send({
+      username: 'cn=bothelper,dc=example,dc=com',
+      password: 'passwordbot'
+    });
+    expect(res.statusCode).toEqual(200); // valid user, so authenticate should pass
+    let token = res.body.token;
+    res = await request(app).post(baseUrlPath + '/verify').send({
+      token: token
+    });
+    expect(res.statusCode).toEqual(200); // valid token, so verify should pass
+  });
+
+  test('invalid service account, using distinguished name', async() => {
+    let res = await request(app).post(baseUrlPath + '/authenticate').send({
+      username: 'cn=bothelperFAKE,dc=example,dc=com',
+      password: 'passwordbot'
+    });
+    expect(res.statusCode).toEqual(401); // invalid user, so authenticate should fail
+    let token = res.body.token;
+    expect(token).toBeUndefined(); // invalid user, so no token returned
+    res = await request(app).post(baseUrlPath + '/verify').send({
+      token: token
+    });
+    expect(res.statusCode).toEqual(400); // no token supplied
+  });
+
+  test('valid service account, using distinguished name, with group', async() => {
+    let res = await request(app).post(baseUrlPath + '/authenticate').send({
+      username: 'cn=bothelper,dc=example,dc=com',
+      password: 'passwordbot',
+      authorized_groups: 'cn=bots,dc=group,dc=example,dc=com'
+    });
+    expect(res.statusCode).toEqual(200); // valid user, so authenticate should pass
+    let token = res.body.token;
+    res = await request(app).post(baseUrlPath + '/verify').send({
+      token: token
+    });
+    expect(res.statusCode).toEqual(200); // valid token, so verify should pass
+  });
+
+
   test('invalid user', async() => {
     let res = await request(app).post(baseUrlPath + '/authenticate').send({
       username: 'user-not-in-database',
