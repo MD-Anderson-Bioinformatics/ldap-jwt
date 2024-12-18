@@ -1,6 +1,6 @@
 const bunyan = require("bunyan");
 const bformat = require("bunyan-format");
-const formatOut = bformat({ outputMode: "long", color: true });
+const formatOut = bformat({ outputMode: "long", color: process.env.COLORIZE_LOGS?.toLowerCase() === "true" });
 
 const logger = bunyan.createLogger({
   // also used for logging in ldapauth-fork and ldapjs
