@@ -100,8 +100,7 @@ app.get(baseUrlPath + "/health", function (req, res) {
 
 var port = process.env.PORT || 3000;
 
-if (settings.ssl) {
-  // use httpS
+if (settings.ssl) { // use httpS
   var options = {
     key: fs.readFileSync("./ssl/server.key"),
     cert: fs.readFileSync("./ssl/server.crt")
@@ -121,8 +120,7 @@ if (settings.ssl) {
       logger.error("ERROR: " + err.stack);
     });
   });
-} else {
-  // use http
+} else { // use http
   var server = http.createServer(app).listen(port, function () {
     logger.info("Server running. Base URL: http://localhost:" + port + baseUrlPath);
     logger.info(

@@ -97,27 +97,13 @@ function verifyHandler(token, authorized_groups) {
       return { httpStatus: 400, message: "Access token has expired" };
     } else if (authorized_groups != undefined) {
       if (groupsInToken && userInAuthorizedGroups(groupsInToken, authorized_groups)) {
-        logger.info(
-          "Token valid for '" +
-            usernameInToken +
-            "', " +
-            "requested groups: '" +
-            getGroupCN(authorized_groups) +
-            "', token groups: '" +
-            getGroupCN(groupsInToken) +
-            "'"
-        );
+        logger.info("Token valid for '" + usernameInToken + "', " + "requested groups: '" + getGroupCN(authorized_groups)
+            + "', token groups: '" + getGroupCN(groupsInToken) + "'");
         return { httpStatus: 200, decodedToken: decodedToken };
       } else {
-        logger.warn(
-          "Invalid token: token/authorized group mismatch for user '" +
-            usernameInToken +
-            "', requested groups: '" +
-            getGroupCN(authorized_groups) +
-            "', token groups: '" +
-            getGroupCN(groupsInToken) +
-            "'"
-        );
+        logger.warn("Invalid token: token/authorized group mismatch for user '" +
+            usernameInToken + "', requested groups: '" + getGroupCN(authorized_groups) +
+            "', token groups: '" + getGroupCN(groupsInToken) + "'");
         return { httpStatus: 401, message: "User is not authorized" };
       }
     } else {
@@ -243,23 +229,12 @@ let generateToken = function (user, settings, userGroupsForPayload) {
     }
     let token = jwt.encode(token_json, app.get("jwtTokenSecret"));
     if (userGroupsForPayload != undefined) {
-      logger.info(
-        "Token generated for '" +
-          user.displayName +
-          "' with groups '" +
-          getGroupCN(userGroupsForPayload).join("; ") +
-          "'." +
-          " JWT expires: " +
-          moment(expires).format("MMMM Do YYYY, h:mm:ss a")
-      );
+      logger.info("Token generated for '" + user.displayName + "' with groups '" +
+          getGroupCN(userGroupsForPayload).join("; ") + "'." + " JWT expires: " +
+          moment(expires).format("MMMM Do YYYY, h:mm:ss a"));
     } else {
-      logger.info(
-        "Token generated for '" +
-          user.displayName +
-          "'." +
-          " JWT expires: " +
-          moment(expires).format("MMMM Do YYYY, h:mm:ss a")
-      );
+      logger.info("Token generated for '" + user.displayName + "'." + " JWT expires: " +
+          moment(expires).format("MMMM Do YYYY, h:mm:ss a"));
     }
     return token;
   } catch (err) {
