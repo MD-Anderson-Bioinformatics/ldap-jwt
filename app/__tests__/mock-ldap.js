@@ -38,6 +38,18 @@ const users = [
       mail: 'user2@example',
       displayName: 'User Two'
     }
+  },
+  {
+    dn: 'cn=bothelper,dc=service,dc=example,dc=com', /* no email for service account */
+    attributes: {
+      objectClass: 'person',
+      cn: 'bothelper',
+      memberOf: [
+        'cn=bots,dc=group,dc=example,dc=com',
+      ],
+      uid: 'bothelper',
+      displayName: 'Bot Helper'
+    }
   }
 ];
 const serverConfiguration = {
