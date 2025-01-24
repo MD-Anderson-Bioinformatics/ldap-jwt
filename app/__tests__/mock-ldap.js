@@ -35,7 +35,7 @@ const users = [
       ],
       title: 'user-title2',
       uid: 'user2',
-      mail: 'user2@example',
+      mail: 'user_two@example',
       displayName: 'User Two'
     }
   },

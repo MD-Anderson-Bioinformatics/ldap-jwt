@@ -18,6 +18,7 @@ jobs:
       LDAPAUTH_BINDDN_PREFIX: ""
       LDAPAUTH_BINDDN_SUFFIX: "@example"
       LDAPAUTH_SEARCHBASE: "dc=example,dc=com"
+      LDAP_SEARCHFILTER: "(|(cn={{username}})(mail={{username}}@mdanderson.org))"
       LDAPAUTH_URL: ldap://localhost:3004
       LOG_LEVEL: info
       NODE_VERSION: 20.x
