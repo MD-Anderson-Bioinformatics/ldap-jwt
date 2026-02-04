@@ -1,5 +1,3 @@
-version: "3.7"
-
 services:
   ldap-jwt:
     build:
@@ -10,6 +8,8 @@ services:
     image: ${IMAGE:-ldap-jwt}:${TAG:-latest}
     container_name: ldap-jwt
     restart: always
+    networks:
+      - ldap-network
     environment:
       - BASE_URL_PATH=${BASE_URL_PATH:-ldap-jwt} # Base path for URL
       - BUILD_TARGET=${BUILD_TARGET:-prod} # used in Dockerfile and setconfig
@@ -36,3 +36,8 @@ services:
     #  - ${PWD}/app:/usr/src/app
     ports:
       - ${PORT:-3000}:${PORT:-3000}
+
+
+networks:
+  ldap-network:
+    external: true
