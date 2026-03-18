@@ -1,4 +1,4 @@
-FROM node:22.22.0-slim as base
+FROM node:22.22.0-slim@sha256:dd9d21971ec4395903fa6143c2b9267d048ae01ca6d3ea96f16cb30df6187d94 AS base
 
 ARG PORT=3000
 ARG NODE_UID=1001
@@ -20,7 +20,7 @@ CMD [ "./setconfig" ]
 ##
 ## Production image (no dev dependecies)
 ##
-FROM base as prod
+FROM base AS prod
 
 USER ${NODE_USER}
 
@@ -29,7 +29,7 @@ RUN npm install --omit=dev
 ##
 ## CI testing image
 ##
-FROM base as ci
+FROM base AS ci
 
 USER ${NODE_USER}
 
@@ -40,7 +40,7 @@ CMD ["npm", "test"]
 ##
 ## Development image with a few niceties
 ##
-FROM base as dev
+FROM base AS dev
 
 RUN mkdir -p /etc/skel   && \
     printf 'PS1="\033[1;32m\u@ldap-jwt:\w/$\033[0m "\nalias ls="ls --color=auto"\nalias vi=vim\n' >> /etc/skel/.profile && \
