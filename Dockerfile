@@ -35,7 +35,7 @@ USER ${NODE_USER}
 
 RUN npm install
 
-CMD ["npm", "test"]
+CMD [ "./setconfig" ]
 
 ##
 ## Development image with a few niceties

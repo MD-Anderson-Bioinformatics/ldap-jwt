@@ -211,8 +211,8 @@ if [ "${BUILD_TARGET}" == "dev" ] ; then
   echo "Starting server for development (requires devDependency nodemon)"
   exec npm run devstart
 elif [ "${BUILD_TARGET}" == "ci" ] ; then
-  echo "Wrote file: config.json for CI build. Exiting"
-  exit 0
+  echo "Wrote file: config.json for CI build. Running CI tests."
+  exec npm test
 else
   echo "Wrote file: config.json for PRODUCTION build."
   echo "Starting server for production"
