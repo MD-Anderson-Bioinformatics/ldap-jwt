@@ -33,7 +33,7 @@ if (settings.hasOwnProperty("ldap") && settings.hasOwnProperty("jwt")) {
   if (!settings.ldap.hasOwnProperty("bindDn")) {
     settings.ldap.bindAsUser = true;
   }
-  logger.debug("LdapAuth settings: " + JSON.stringify(settings.ldap, ut.hideSecretsAndLogger, 2));
+  logger.debug("ldap settings: " + JSON.stringify(settings.ldap, ut.hideSecretsAndLogger, 2));
 } else {
   logger.error("LDAP and JWT settings are required. Exiting.");
   process.exit(1);

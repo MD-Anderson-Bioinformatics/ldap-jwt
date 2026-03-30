@@ -1,5 +1,5 @@
 const logger = require("./logger");
-var LdapAuth = require("ldapauth-fork");
+const { Client, InvalidCredentialsError } = require("ldapts");
 var moment = require("moment");
 var jwt = require("jwt-simple");
 
@@ -18,7 +18,7 @@ var jwt = require("jwt-simple");
 async function authenticateHandler(username, password, settings, authorized_groups) {
   // First handle credentials and reject if invalid
   try {
-    var user = await queryAuthentication(username, password, settings);
+    var user = await authenticateWithLdap(username, password, settings);
   } catch (err) {
     return new Promise(function (resolve, reject) {
       if (
@@ -167,7 +167,8 @@ function getGroupCN(groups) {
 }
 
 /**
- * Queries auth.authenticate for a user with given username and password.
+ * Authenticates a user against the LDAP server by binding with search credentials or service account,
+ * searching for the user, and verifyting the password with a second bind.
  *
  * @async
  * @private
@@ -177,28 +178,71 @@ function getGroupCN(groups) {
  * @returns {Promise<Object>} A promise that resolves with the authenticated user object if authentication is successful,
  * or rejects with an error if authentication fails.
  */
-async function queryAuthentication(username, password, settings) {
-  let auth = await bind(username, password, settings);
-  return new Promise(function (resolve, reject) {
-    let authenticateName = username;
-    if (isDistinguishedName(username)) { // typically, the LDAP search filter prevents authenticating with DN
-      authenticateName = getCommonName(username);
+async function authenticateWithLdap(username, password, settings) {
+  const ldapSettings = settings.ldap;
+  logger.debug(`ldapSettings: ${JSON.stringify(ldapSettings, hideSecretsAndLogger, 4)}`);
+  let authenticateName = username;
+  if (isDistinguishedName(username)) { // typically, the LDAP search filter prevents authenticating with DN
+    authenticateName = getCommonName(username);
+  }
+
+  // Determine search bind credentials (wither user or a service accoint
+  let searchBindDn, searchBindCredentials;
+  if (ldapSettings.bindAsUser) { // user
+    searchBindCredentials = password;
+    if (isDistinguishedName(username)) {
+      searchBindDn = username;
+    } else {
+      searchBindDn = ldapSettings.binddn_prefix + username + ldapSettings.binddn_suffix;
     }
-    auth.authenticate(authenticateName, password, async function (err, user) {
-      await unbind(auth, settings);
-      if (err) {
-        logger.warn("Authentication error: ", err);
-        reject(err);
-        return;
-      } else if (!user) {
-        logger.debug("ERROR: Reject because no user");
-        reject();
-        return;
-      } else {
-        resolve(user);
-      }
+    let loggableSettings = structuredClone(ldapSettings);
+    loggableSettings.bindDn = searchBindDn;
+    loggableSettings.bindCredentials = password;
+    logger.debug("Binding info: " + JSON.stringify(loggableSettings, hideSecretsAndLogger, 4));
+  } else { // service account
+    searchBindDn = ldapSettings.bindDn;
+    searchBindCredentials = ldapSettings.bindCredentials;
+  }
+
+  const clientOpts = { url: ldapSettings.url };
+  if (ldapSettings.timeout !== undefined) clientOpts.timeout = ldapSettings.timeout;
+  if (ldapSettings.connectTimeout !== undefined) clientOpts.connectTimeout = ldapSettings.connectTimeout;
+  if (ldapSettings.tlsOptions !== undefined) clientOpts.tlsOptions = ldapSettings.tlsOptions;
+
+  // Step 1: Bind and search for user to get DN and attributes
+  logger.debug(`clientOpts: ${JSON.stringify(clientOpts, hideSecretsAndLogger, 4)}`);
+  const searchClient = new Client(clientOpts);
+  let userEntry;
+  try {
+    await searchClient.bind(searchBindDn, searchBindCredentials);
+    const searchFilter = ldapSettings.searchFilter.replace(/\{\{username\}\}/g, authenticateName);
+    logger.debug(`searchFilter: ${searchFilter}`);
+    const { searchEntries } = await searchClient.search(ldapSettings.searchBase, {
+      filter: searchFilter,
+      scope: 'sub',
     });
-  });
+    if (searchEntries.length === 0) {
+      throw "no such user";
+    }
+    userEntry = searchEntries[0];
+  } catch (err) {
+    if (err instanceof InvalidCredentialsError && !ldapSettings.bindAsUser) {
+      logger.error("Invalid credentials for service account: '" + searchBindDn + "'");
+    }
+    throw err;
+  } finally {
+    try { await searchClient.unbind(); } catch (_) {}
+  }
+
+  // Step 2: Verify password by binding as the found user
+  const verifyClient = new Client(clientOpts);
+  try {
+    await verifyClient.bind(userEntry.dn, password);
+  } finally {
+    try { await verifyClient.unbind(); } catch (_) {}
+  }
+
+  return userEntry;
 }
 
 /**
@@ -263,76 +307,6 @@ let userGroupAuthGroupIntersection = function (userGroups, authorized_groups) {
     logger.error("Error in userGroupAuthGroupIntersection: ", err);
     throw "Unable to determine userGroupsAuthGroupIntersection";
   }
-};
-
-/**
- * Creates a new LDAP bind using the provided username, password, and settings.
- *
- * This function creates a new LDAP bind configuration based on the provided settings.
- * If `settings.ldap.bindAsUser` is true, it uses the provided username and password for binding.
- * Otherwise, it uses the default bind credentials from `settings`.
- *
- * @async
- * @private
- * @param {string} username - The username to bind with.
- * @param {string} password - The password to bind with.
- * @param {Object} settings - The settings for the LDAP bind.
- * @param {Object} settings.ldap - The LDAP settings.
- * @param {boolean} settings.ldap.bindAsUser - Whether to bind as the user.
- * @param {string} settings.ldap.binddn_prefix - The prefix for the bind DN. E.g. "CN=". Use if `bindAsUser` is true.
- * @param {string} settings.ldap.binddn_suffix - The suffix for the bind DN. E.g. ",OU=Users,DC=example,DC=com". Use if `bindAsUser` is true.
- * @param {string} settings.ldap.bindCredentials - The default bind credentials. Use if `bindAsUser` is false.
- * @param {string} settings.ldap.bindDn - The default bind DN. Use if `bindAsUser` is false.
- * @returns {Promise<LdapAuth>} - A promise that resolves to an LdapAuth instance.
- */
-let bind = async function (username, password, settings) {
-  return new Promise(function (resolve, reject) {
-    try {
-      let settingsForBind = structuredClone(settings.ldap); // structuredClone to avoid changing the original settings
-      settingsForBind.log = logger; // adding bunyan logger to LdapAuth settings
-      if (settings.ldap.bindAsUser) {
-        settingsForBind.bindCredentials = password;
-        if (isDistinguishedName(username)) { // e.g. CN=JohnDoe,OU=Users,DC=example,DC=com
-          settingsForBind.bindDn = username;
-        } else {
-          settingsForBind.bindDn =
-            settings.ldap.binddn_prefix + username + settings.ldap.binddn_suffix;
-        }
-        logger.debug("Binding info: " + JSON.stringify(settingsForBind, hideSecretsAndLogger, 4));
-      } else {
-        settingsForBind.bindCredentials = settings.ldap.bindCredentials;
-        settingsForBind.bindDn = settings.ldap.bindDn;
-      }
-      let auth = new LdapAuth(settingsForBind);
-      resolve(auth);
-    } catch (err) {
-      logger.error("Error creating new bind: ", err);
-      reject();
-      return;
-    }
-  });
-};
-
-/**
- * Unbinds a user from the LDAP server.
- *
- * @private
- * @async
- * @param {Object} auth - The LDAPAuth object representing the authenticated user.
- * @param {Object} settings - The settings for the LDAP server and unbinding options.
- * @returns {Promise<void>} A promise that resolves if unbinding is successful, or rejects if an error occurs during unbinding.
- */
-let unbind = async function (auth, settings) {
-  return new Promise(function (resolve, reject) {
-    try {
-      auth.close();
-      resolve();
-    } catch (err) {
-      logger.error("Error unbinding: ", err);
-      reject();
-      return;
-    }
-  });
 };
 
 /**
