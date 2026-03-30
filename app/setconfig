@@ -15,22 +15,22 @@ if [ "X${LDAP}" = Xenabled ] ; then
     >&2 echo Binds to LDAP will use LDAP_BINDDN and LDAP_BINDCREDENTIALS
     if [ -v LDAPAUTH_BINDDN_PREFIX ] ; then # so LDAPAUTH_BINDDN_PREFIX should not be defined
       >&2 echo Error: Conflicting configurations: LDAPAUTH_BINDDN, LDAPAUTH_BINDCREDENTIALS and LDAPAUTH_BINDDN_PREFIX are all defined.
-      exit 0
+      exit 1
     fi
     if [ -v LDAPAUTH_BINDDN_SUFFIX ] ; then # so LDAPAUTH_BINDDN_SUFFIX should not be defined
       >&2 echo Error: Conflicting configurations: LDAPAUTH_BINDDN, LDAPAUTH_BINDCREDENTIALS and LDAPAUTH_BINDDN_SUFFIX are all defined.
-      exit 0
+      exit 1
     fi
   fi
   if [[ -v LDAPAUTH_BINDDN_PREFIX && -v LDAPAUTH_BINDDN_SUFFIX ]]; then # using authenticating user to bind to LDAP
     >&2 echo Binds to LDAP will use distinguished name: LDAP_BINDDN_PREFIX + \<authenticating username\> + LDAP_BINDDN_SUFFIX
     if [ "${LDAPAUTH_BINDDN}" ] ; then # so LDAPAUTH_BINDDN should not be defined
       >&2 echo Error: Conflicting configurations: LDAPAUTH_BINDDN_PREFIX, LDAPAUTH_BINDDN_SUFFIX and LDAPAUTH_BINDDN are all defined.
-      exit 0
+      exit 1
     fi
     if [ "${LDAPAUTH_BINDCREDENTIALS}" ] ; then # so LDAPAUTH_BINDCREDENTIALS should not be defined
       >&2 echo Error: Conflicting configurations: LDAPAUTH_BIND_PREFIX, LDAPAUTH_BINDDN_SUFFIX and LDAPAUTH_BINDCREDENTIALS are all defined.
-      exit 0
+      exit 1
     fi
   fi
 
@@ -38,22 +38,22 @@ if [ "X${LDAP}" = Xenabled ] ; then
   ## So make sure if one is defined, then the other is also defined.
   if [[ "${LDAPAUTH_BINDDN}" && -z "${LDAPAUTH_BINDCREDENTIALS}" ]]; then
     >&2 echo Error: LDAPAUTH_BINDDN is defined but LDAPAUTH_BINDCREDENTIALS is unset or empty.
-    exit 0
+    exit 1
   fi
   if [[ "${LDAPAUTH_BINDCREDENTIALS}" && -z "${LDAPAUTH_BINDDN}" ]]; then
     >&2 echo Error: LDAPAUTH_BINDCREDENTIALS is defined but LDAPAUTH_BINDDN is unset or empty.
-    exit 0
+    exit 1
   fi
 
   ## If LDAPAUTH_BINDDN_PREFIX and LDAPAUTH_BINDDN_SUFFIX are defined, then configuring to bind to LDAP using authenticating user.
   ## So make sure if one is defined, then the other is also defined. Both can be empty.
   if [[ -v LDAPAUTH_BINDDN_PREFIX && ! -v LDAPAUTH_BINDDN_SUFFIX ]]; then
     >&2 echo Error: LDAPAUTH_BINDDN_PREFIX is defined but LDAPAUTH_BINDDN_SUFFIX is not.
-    exit 0
+    exit 1
   fi
   if [[ -v LDAPAUTH_BINDDN_SUFFIX && ! -v LDAPAUTH_BINDDN_PREFIX ]]; then
     >&2 echo Error: LDAPAUTH_BINDDN_SUFFIX is defined but LDAPAUTH_BINDDN_PREFIX is not.
-    exit 0
+    exit 1
   fi
 
   if [ -z "${LDAPAUTH_SEARCHBASE}" ] ; then
@@ -81,8 +81,7 @@ if [ "X${CLIENT_ID}" != X -a "X${CLIENT_SECRET}" = X ] ; then
 fi
 
 if [ $error -eq 1 ] ; then
-   # Use exit code 0 to prevent container restart.
-   exit 0
+   exit 1
 fi
 
 ##### END Error checking
@@ -211,13 +210,10 @@ if [ "${BUILD_TARGET}" == "dev" ] ; then
   echo "Starting server for development (requires devDependency nodemon)"
   exec npm run devstart
 elif [ "${BUILD_TARGET}" == "ci" ] ; then
-  echo "Wrote file: config.json for CI build. Exiting"
-  exit 0
+  echo "Wrote file: config.json for CI build. Running CI tests."
+  exec npm test
 else
   echo "Wrote file: config.json for PRODUCTION build."
   echo "Starting server for production"
   exec npm start
 fi
-
-# Should not happen.  Use exit code 0 to prevent container restart.
-exit 0
