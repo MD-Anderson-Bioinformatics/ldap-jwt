@@ -24,7 +24,7 @@ FROM base AS prod
 
 USER ${NODE_USER}
 
-RUN npm install --omit=dev
+RUN npm install --omit=dev --omit=optional
 
 ##
 ## CI testing image
