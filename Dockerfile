@@ -24,7 +24,7 @@ FROM base AS prod
 
 USER ${NODE_USER}
 
-RUN npm install --omit=dev --omit=optional
+RUN npm ci --omit=dev --omit=optional
 
 ##
 ## CI testing image
@@ -33,7 +33,7 @@ FROM base AS ci
 
 USER ${NODE_USER}
 
-RUN npm install
+RUN npm ci --omit=optional
 
 CMD [ "./setconfig" ]
 
@@ -54,6 +54,6 @@ RUN mkdir -p /etc/skel   && \
     cp /etc/skel/.vimrc ${LDAPJWT_BASE_DIR} && \
     apt-get update -y && apt-get install -y tree vim
 
-USER ${NODE_USER}
+RUN npm ci --omit=optional
 
-RUN npm install
+USER ${NODE_USER}
