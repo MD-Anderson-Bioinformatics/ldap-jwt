@@ -186,7 +186,7 @@ async function authenticateWithLdap(username, password, settings) {
     authenticateName = getCommonName(username);
   }
 
-  // Determine search bind credentials (wither user or a service accoint
+  // Determine search bind credentials (either user or a service account)
   let searchBindDn, searchBindCredentials;
   if (ldapSettings.bindAsUser) { // user
     searchBindCredentials = password;
