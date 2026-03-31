@@ -168,7 +168,7 @@ function getGroupCN(groups) {
 
 /**
  * Authenticates a user against the LDAP server by binding with search credentials or service account,
- * searching for the user, and verifyting the password with a second bind.
+ * searching for the user, and verifying the password with a second bind.
  *
  * @async
  * @private
