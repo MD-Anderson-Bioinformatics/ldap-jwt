@@ -181,10 +181,6 @@ function getGroupCN(groups) {
 async function authenticateWithLdap(username, password, settings) {
   const ldapSettings = settings.ldap;
   logger.debug(`ldapSettings: ${JSON.stringify(ldapSettings, hideSecretsAndLogger, 4)}`);
-  let commonName = username;
-  if (isDistinguishedName(username)) { // typically, the LDAP search filter prevents authenticating with DN
-    commonName = getCommonName(username);
-  }
 
   // Determine search bind credentials (either user or a service account)
   let searchBindDn, searchBindCredentials;
@@ -212,6 +208,10 @@ async function authenticateWithLdap(username, password, settings) {
   let userEntry;
   try {
     await searchClient.bind(searchBindDn, searchBindCredentials);
+    let commonName = username;
+    if (isDistinguishedName(username)) { // typically, the LDAP search filter prevents authenticating with DN
+      commonName = getCommonName(username);
+    }
     const searchFilter = ldapSettings.searchFilter.replace(/\{\{username\}\}/g, commonName);
     logger.debug(`searchFilter: ${searchFilter}`);
     const { searchEntries } = await searchClient.search(ldapSettings.searchBase, {
