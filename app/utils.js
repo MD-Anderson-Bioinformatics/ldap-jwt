@@ -139,7 +139,7 @@ function hideSecretsAndLogger(key, value) {
 }
 
 /**
- * Extracts the Common Name (CN) from a group or a list of groups.
+ * Extracts the Common Name (CN) from a group or a list of groups. Used for logging.
  *
  * @private
  * @param {string|string[]} groups - A single group string or an array of group strings.
