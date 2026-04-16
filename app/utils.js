@@ -23,9 +23,9 @@ async function authenticateHandler(username, password, settings, authorized_grou
     return new Promise(function (resolve, reject) {
       if (
         err.name === "InvalidCredentialsError" ||
-        (typeof err === "string" && err.match(/no such user/i))
+        (typeof err === "string" && err.match(/no such user/i)) ||
+        (typeof err === "string" && err.match(/too many users/i))
       ) {
-        logger.warn("InvalidCredentialsError for '" + username + "'");
         reject({ httpStatus: 401, message: "Wrong username or password" });
         return;
       } else {
@@ -220,6 +220,10 @@ async function authenticateWithLdap(username, password, settings) {
     });
     if (searchEntries.length === 0) {
       throw "no such user";
+    }
+    if (searchEntries.length > 1) {
+      logger.warn("Too many users found: " + searchEntries.length + ", for username query: '" + username + "'")
+      throw "too many users";
     }
     userEntry = searchEntries[0];
   } catch (err) {
