@@ -124,7 +124,7 @@ if (settings.ssl) { // use httpS
     if (settings.ldap.bindAsUser) {
       logger.info("Will bind with authenticating user's credentials");
     } else {
-      logger.info("Will bind with service account: " + ut.getGroupCN(settings.ldap.bindDn));
+      logger.info("Will bind with service account: " + settings.ldap.bindDn);
     }
     app.on("error", (err) => {
       logger.error("ERROR: " + err.stack);
