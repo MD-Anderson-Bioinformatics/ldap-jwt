@@ -189,13 +189,13 @@ async function authenticateWithLdap(username, password, settings) {
     if (isDistinguishedName(username)) {
       searchBindDn = username;
     } else {
-      searchBindDn = ldapSettings.binddn_prefix + username + ldapSettings.binddn_suffix;
+      searchBindDn = ldapSettings.binddn_prefix + escapeLdapDnValue(username) + ldapSettings.binddn_suffix;
     }
+    logger.info("User is attempting bind with: " + searchBindDn);
   } else { // service account
     searchBindDn = ldapSettings.bindDn;
     searchBindCredentials = ldapSettings.bindCredentials;
   }
-  logger.debug("searchBindDn: " + searchBindDn);
 
   const clientOpts = { url: ldapSettings.url };
   if (ldapSettings.timeout !== undefined) clientOpts.timeout = ldapSettings.timeout;
@@ -212,7 +212,7 @@ async function authenticateWithLdap(username, password, settings) {
     if (isDistinguishedName(username)) { // typically, the LDAP search filter prevents authenticating with DN
       commonName = getCommonName(username);
     }
-    const searchFilter = ldapSettings.searchFilter.replace(/\{\{username\}\}/g, commonName);
+    const searchFilter = ldapSettings.searchFilter.replace(/\{\{username\}\}/g, escapeLdapFilterValue(commonName));
     logger.debug(`searchFilter: ${searchFilter}`);
     const { searchEntries } = await searchClient.search(ldapSettings.searchBase, {
       filter: searchFilter,
@@ -365,8 +365,86 @@ let getCommonName = function (dn) {
   return dn.split(",")[0].split("=")[1];
 }
 
+/**
+ * Escapes special characters in a value for safe use in an LDAP Distinguished
+ * Name (DN), preventing DN injection attacks.
+ *
+ * Follows RFC 4514 encoding rules. Unlike filter escaping, DN escaping must
+ * also handle positional rules — leading spaces/hashes and trailing spaces
+ * have special significance and are escaped separately.
+ *
+ * @param {string} value - The user-supplied string to escape, typically a username.
+ * @returns {string} The escaped string, safe for interpolation into a DN.
+ *
+ * @example
+ * // Returns 'john.doe'  (no special characters, unchanged)
+ * escapeLdapDnValue('john.doe');
+ *
+ * @example
+ * // Returns 'John\\ Doe'  (space is structural in some positions, escaped for safety)
+ * escapeLdapDnValue('John Doe');
+ *
+ * @example
+ * // Prevents redirect: returns 'admin\\,dc\\=example\\,dc\\=com'
+ * escapeLdapDnValue('admin,dc=example,dc=com');
+ */
+function escapeLdapDnValue(value) {
+  return value
+    // Escape backslash first (must be before other escapes)
+    .replace(/\\/g, '\\\\')
+    // Escape special DN characters
+    .replace(/[,=+<>#;"]/g, '\\$&')
+    // Escape leading space or #
+    .replace(/^([ #])/, '\\$1')
+    // Escape trailing space
+    .replace(/([ ])$/, '\\$1')
+    // Escape null byte
+    .replace(/\0/g, '\\00');
+}
+
+/**
+ * Escapes special characters in a value for safe use in an LDAP search filter,
+ * preventing LDAP injection attacks.
+ *
+ * Follows RFC 4515 encoding rules, replacing special characters with their
+ * backslash-escaped hex equivalents.
+ *
+ * @param {string} value - The user-supplied string to escape.
+ * @returns {string} The escaped string, safe for interpolation into an LDAP filter.
+ *
+ * @example
+ * // Returns 'john.doe'  (no special characters, unchanged)
+ * escapeLdapFilterValue('john.doe');
+ *
+ * @example
+ * // Returns 'admin\\2a'  (wildcard escaped)
+ * escapeLdapFilterValue('admin*');
+ *
+ * @example
+ * // Prevents injection: returns '\\2a\\29\\28|\\28uid=\\2a\\29'
+ * escapeLdapFilterValue('*)(|(uid=*)');
+ */
+function escapeLdapFilterValue(value) {
+  return value
+    // Escape backslash first (must be before other escapes)
+    .replace(/\\/g, '\\5c')
+    // Escape null byte
+    .replace(/\0/g, '\\00')
+    // Escape filter special characters
+    .replace(/\*/g, '\\2a')
+    .replace(/\(/g, '\\28')
+    .replace(/\)/g, '\\29');
+}
+
 module.exports = {
   authenticateHandler: authenticateHandler,
   verifyHandler: verifyHandler,
   hideSecretsAndLogger: hideSecretsAndLogger
 };
+
+if (process.env.NODE_ENV === 'test') {
+  module.exports._test = {
+    escapeLdapDnValue: escapeLdapDnValue,
+    escapeLdapFilterValue: escapeLdapFilterValue
+  }
+}
