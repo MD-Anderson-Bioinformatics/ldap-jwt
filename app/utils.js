@@ -229,6 +229,7 @@ async function authenticateWithLdap(username, password, settings) {
   } catch (err) {
     if (err instanceof InvalidCredentialsError && !ldapSettings.bindAsUser) {
       logger.error("Invalid credentials for service account: '" + searchBindDn + "'");
+      throw "LDAP service account bind failed";
     }
     throw err;
   } finally {
