@@ -216,7 +216,7 @@ async function authenticateWithLdap(username, password, settings) {
     logger.debug(`searchFilter: ${searchFilter}`);
     const { searchEntries } = await searchClient.search(ldapSettings.searchBase, {
       filter: searchFilter,
-      scope: 'sub',
+      scope: ldapSettings.searchScope || 'sub',
     });
     if (searchEntries.length === 0) {
       throw "no such user";
