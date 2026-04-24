@@ -382,7 +382,7 @@ let getCommonName = function (dn) {
  * escapeLdapDnValue('john.doe');
  *
  * @example
- * // Returns 'John\\ Doe'  (space is structural in some positions, escaped for safety)
+ * // Returns 'John Doe'  (embedded spaces are unchanged)
  * escapeLdapDnValue('John Doe');
  *
  * @example
