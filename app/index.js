@@ -105,6 +105,10 @@ if (!settings.ldap.searchBase || !settings.ldap.searchFilter) {
   logger.error("LDAP configuration missing a required field: settings.ldap.searchBase or settings.ldap.searchFilter");
   throw new Error("LDAP configuration missing a required field: settings.ldap.searchBase or settings.ldap.searchFilter");
 }
+if (!settings.ldap.searchFilter.includes('{{username}}')) {
+  logger.error("settings.ldap.searchFilter must contain '{{username}}' to scope searches to the authenticating user");
+  throw new Error("settings.ldap.searchFilter must contain '{{username}}'");
+}
 if (settings.ldap.bindAsUser) {
   if (settings.ldap.binddn_prefix === undefined || settings.ldap.binddn_suffix === undefined) {
     logger.error("LDAP bindAsUser mode requires both settings.ldap.binddn_prefix and settings.ldap.binddn_suffix");
