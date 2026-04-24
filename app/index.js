@@ -57,7 +57,8 @@ if (settings.hasOwnProperty("jwt")) {
 }
 
 app.post(baseUrlPath + "/authenticate", function (req, res) {
-  if (!req.body.username || !req.body.password) {
+  if (typeof req.body.username !== 'string' || typeof req.body.password !== 'string' ||
+      !req.body.username.trim() || !req.body.password.trim()) {
     logger.warn("No username or password supplied in request");
     res.status(400).send({ error: "No username or password supplied" });
     return false;
