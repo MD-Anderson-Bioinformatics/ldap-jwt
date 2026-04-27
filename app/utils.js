@@ -1,5 +1,5 @@
 const logger = require("./logger");
-var LdapAuth = require("ldapauth-fork");
+const { Client, InvalidCredentialsError } = require("ldapts");
 var moment = require("moment");
 var jwt = require("jwt-simple");
 
@@ -18,14 +18,14 @@ var jwt = require("jwt-simple");
 async function authenticateHandler(username, password, settings, authorized_groups) {
   // First handle credentials and reject if invalid
   try {
-    var user = await queryAuthentication(username, password, settings);
+    var user = await authenticateWithLdap(username, password, settings);
   } catch (err) {
     return new Promise(function (resolve, reject) {
       if (
         err.name === "InvalidCredentialsError" ||
-        (typeof err === "string" && err.match(/no such user/i))
+        (typeof err === "string" && err.match(/no such user/i)) ||
+        (typeof err === "string" && err.match(/too many users/i))
       ) {
-        logger.warn("InvalidCredentialsError for '" + username + "'");
         reject({ httpStatus: 401, message: "Wrong username or password" });
         return;
       } else {
@@ -139,7 +139,7 @@ function hideSecretsAndLogger(key, value) {
 }
 
 /**
- * Extracts the Common Name (CN) from a group or a list of groups.
+ * Extracts the Common Name (CN) from a group or a list of groups. Used for logging.
  *
  * @private
  * @param {string|string[]} groups - A single group string or an array of group strings.
@@ -167,7 +167,8 @@ function getGroupCN(groups) {
 }
 
 /**
- * Queries auth.authenticate for a user with given username and password.
+ * Authenticates a user against the LDAP server by binding with search credentials or service account,
+ * searching for the user, and verifying the password with a second bind.
  *
  * @async
  * @private
@@ -177,28 +178,73 @@ function getGroupCN(groups) {
  * @returns {Promise<Object>} A promise that resolves with the authenticated user object if authentication is successful,
  * or rejects with an error if authentication fails.
  */
-async function queryAuthentication(username, password, settings) {
-  let auth = await bind(username, password, settings);
-  return new Promise(function (resolve, reject) {
-    let authenticateName = username;
-    if (isDistinguishedName(username)) { // typically, the LDAP search filter prevents authenticating with DN
-      authenticateName = getCommonName(username);
+async function authenticateWithLdap(username, password, settings) {
+  const ldapSettings = settings.ldap;
+  logger.debug(`ldapSettings: ${JSON.stringify(ldapSettings, hideSecretsAndLogger, 4)}`);
+
+  // Determine search bind credentials (either user or a service account)
+  let searchBindDn, searchBindCredentials;
+  if (ldapSettings.bindAsUser) { // user
+    searchBindCredentials = password;
+    if (isDistinguishedName(username)) {
+      searchBindDn = username;
+    } else {
+      searchBindDn = ldapSettings.binddn_prefix + escapeLdapDnValue(username) + ldapSettings.binddn_suffix;
     }
-    auth.authenticate(authenticateName, password, async function (err, user) {
-      await unbind(auth, settings);
-      if (err) {
-        logger.warn("Authentication error: ", err);
-        reject(err);
-        return;
-      } else if (!user) {
-        logger.debug("ERROR: Reject because no user");
-        reject();
-        return;
-      } else {
-        resolve(user);
-      }
+    logger.info("User is attempting bind with: " + searchBindDn);
+  } else { // service account
+    searchBindDn = ldapSettings.bindDn;
+    searchBindCredentials = ldapSettings.bindCredentials;
+  }
+
+  const clientOpts = { url: ldapSettings.url };
+  if (ldapSettings.timeout !== undefined) clientOpts.timeout = ldapSettings.timeout;
+  if (ldapSettings.connectTimeout !== undefined) clientOpts.connectTimeout = ldapSettings.connectTimeout;
+  if (ldapSettings.tlsOptions !== undefined) clientOpts.tlsOptions = ldapSettings.tlsOptions;
+
+  // Step 1: Bind and search for user to get DN and attributes
+  logger.debug(`clientOpts: ${JSON.stringify(clientOpts, hideSecretsAndLogger, 4)}`);
+  const searchClient = new Client(clientOpts);
+  let userEntry;
+  try {
+    await searchClient.bind(searchBindDn, searchBindCredentials);
+    let commonName = username;
+    if (isDistinguishedName(username)) { // typically, the LDAP search filter prevents authenticating with DN
+      commonName = getCommonName(username);
+    }
+    const searchFilter = ldapSettings.searchFilter.replace(/\{\{username\}\}/g, escapeLdapFilterValue(commonName));
+    logger.debug(`searchFilter: ${searchFilter}`);
+    const { searchEntries } = await searchClient.search(ldapSettings.searchBase, {
+      filter: searchFilter,
+      scope: ldapSettings.searchScope || 'sub',
     });
-  });
+    if (searchEntries.length === 0) {
+      throw "no such user";
+    }
+    if (searchEntries.length > 1) {
+      logger.warn("Too many users found: " + searchEntries.length + ", for username query: '" + username + "'")
+      throw "too many users";
+    }
+    userEntry = searchEntries[0];
+  } catch (err) {
+    if (err instanceof InvalidCredentialsError && !ldapSettings.bindAsUser) {
+      logger.error("Invalid credentials for service account: '" + searchBindDn + "'");
+      throw "LDAP service account bind failed";
+    }
+    throw err;
+  } finally {
+    try { await searchClient.unbind(); } catch (_) {}
+  }
+
+  // Step 2: Verify password by binding as the found user
+  const verifyClient = new Client(clientOpts);
+  try {
+    await verifyClient.bind(userEntry.dn, password);
+  } finally {
+    try { await verifyClient.unbind(); } catch (_) {}
+  }
+
+  return userEntry;
 }
 
 /**
@@ -266,76 +312,6 @@ let userGroupAuthGroupIntersection = function (userGroups, authorized_groups) {
 };
 
 /**
- * Creates a new LDAP bind using the provided username, password, and settings.
- *
- * This function creates a new LDAP bind configuration based on the provided settings.
- * If `settings.ldap.bindAsUser` is true, it uses the provided username and password for binding.
- * Otherwise, it uses the default bind credentials from `settings`.
- *
- * @async
- * @private
- * @param {string} username - The username to bind with.
- * @param {string} password - The password to bind with.
- * @param {Object} settings - The settings for the LDAP bind.
- * @param {Object} settings.ldap - The LDAP settings.
- * @param {boolean} settings.ldap.bindAsUser - Whether to bind as the user.
- * @param {string} settings.ldap.binddn_prefix - The prefix for the bind DN. E.g. "CN=". Use if `bindAsUser` is true.
- * @param {string} settings.ldap.binddn_suffix - The suffix for the bind DN. E.g. ",OU=Users,DC=example,DC=com". Use if `bindAsUser` is true.
- * @param {string} settings.ldap.bindCredentials - The default bind credentials. Use if `bindAsUser` is false.
- * @param {string} settings.ldap.bindDn - The default bind DN. Use if `bindAsUser` is false.
- * @returns {Promise<LdapAuth>} - A promise that resolves to an LdapAuth instance.
- */
-let bind = async function (username, password, settings) {
-  return new Promise(function (resolve, reject) {
-    try {
-      let settingsForBind = structuredClone(settings.ldap); // structuredClone to avoid changing the original settings
-      settingsForBind.log = logger; // adding bunyan logger to LdapAuth settings
-      if (settings.ldap.bindAsUser) {
-        settingsForBind.bindCredentials = password;
-        if (isDistinguishedName(username)) { // e.g. CN=JohnDoe,OU=Users,DC=example,DC=com
-          settingsForBind.bindDn = username;
-        } else {
-          settingsForBind.bindDn =
-            settings.ldap.binddn_prefix + username + settings.ldap.binddn_suffix;
-        }
-        logger.debug("Binding info: " + JSON.stringify(settingsForBind, hideSecretsAndLogger, 4));
-      } else {
-        settingsForBind.bindCredentials = settings.ldap.bindCredentials;
-        settingsForBind.bindDn = settings.ldap.bindDn;
-      }
-      let auth = new LdapAuth(settingsForBind);
-      resolve(auth);
-    } catch (err) {
-      logger.error("Error creating new bind: ", err);
-      reject();
-      return;
-    }
-  });
-};
-
-/**
- * Unbinds a user from the LDAP server.
- *
- * @private
- * @async
- * @param {Object} auth - The LDAPAuth object representing the authenticated user.
- * @param {Object} settings - The settings for the LDAP server and unbinding options.
- * @returns {Promise<void>} A promise that resolves if unbinding is successful, or rejects if an error occurs during unbinding.
- */
-let unbind = async function (auth, settings) {
-  return new Promise(function (resolve, reject) {
-    try {
-      auth.close();
-      resolve();
-    } catch (err) {
-      logger.error("Error unbinding: ", err);
-      reject();
-      return;
-    }
-  });
-};
-
-/**
  * Checks if a user is part of any of the authorized groups.
  *
  * @private
@@ -390,8 +366,86 @@ let getCommonName = function (dn) {
   return dn.split(",")[0].split("=")[1];
 }
 
+/**
+ * Escapes special characters in a value for safe use in an LDAP Distinguished
+ * Name (DN), preventing DN injection attacks.
+ *
+ * Follows RFC 4514 encoding rules. Unlike filter escaping, DN escaping must
+ * also handle positional rules — leading spaces/hashes and trailing spaces
+ * have special significance and are escaped separately.
+ *
+ * @param {string} value - The user-supplied string to escape, typically a username.
+ * @returns {string} The escaped string, safe for interpolation into a DN.
+ *
+ * @example
+ * // Returns 'john.doe'  (no special characters, unchanged)
+ * escapeLdapDnValue('john.doe');
+ *
+ * @example
+ * // Returns 'John Doe'  (embedded spaces are unchanged)
+ * escapeLdapDnValue('John Doe');
+ *
+ * @example
+ * // Prevents redirect: returns 'admin\\,dc\\=example\\,dc\\=com'
+ * escapeLdapDnValue('admin,dc=example,dc=com');
+ */
+function escapeLdapDnValue(value) {
+  return value
+    // Escape backslash first (must be before other escapes)
+    .replace(/\\/g, '\\\\')
+    // Escape special DN characters
+    .replace(/[,=+<>#;"]/g, '\\$&')
+    // Escape leading space or #
+    .replace(/^([ #])/, '\\$1')
+    // Escape trailing space
+    .replace(/([ ])$/, '\\$1')
+    // Escape null byte
+    .replace(/\0/g, '\\00');
+}
+
+/**
+ * Escapes special characters in a value for safe use in an LDAP search filter,
+ * preventing LDAP injection attacks.
+ *
+ * Follows RFC 4515 encoding rules, replacing special characters with their
+ * backslash-escaped hex equivalents.
+ *
+ * @param {string} value - The user-supplied string to escape.
+ * @returns {string} The escaped string, safe for interpolation into an LDAP filter.
+ *
+ * @example
+ * // Returns 'john.doe'  (no special characters, unchanged)
+ * escapeLdapFilterValue('john.doe');
+ *
+ * @example
+ * // Returns 'admin\\2a'  (wildcard escaped)
+ * escapeLdapFilterValue('admin*');
+ *
+ * @example
+ * // Prevents injection: returns '\\2a\\29\\28|\\28uid=\\2a\\29'
+ * escapeLdapFilterValue('*)(|(uid=*)');
+ */
+function escapeLdapFilterValue(value) {
+  return value
+    // Escape backslash first (must be before other escapes)
+    .replace(/\\/g, '\\5c')
+    // Escape null byte
+    .replace(/\0/g, '\\00')
+    // Escape filter special characters
+    .replace(/\*/g, '\\2a')
+    .replace(/\(/g, '\\28')
+    .replace(/\)/g, '\\29');
+}
+
 module.exports = {
   authenticateHandler: authenticateHandler,
   verifyHandler: verifyHandler,
   hideSecretsAndLogger: hideSecretsAndLogger
 };
+
+if (process.env.NODE_ENV === 'test') {
+  module.exports._test = {
+    escapeLdapDnValue: escapeLdapDnValue,
+    escapeLdapFilterValue: escapeLdapFilterValue
+  }
+}

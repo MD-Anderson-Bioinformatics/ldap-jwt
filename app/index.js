@@ -33,7 +33,7 @@ if (settings.hasOwnProperty("ldap") && settings.hasOwnProperty("jwt")) {
   if (!settings.ldap.hasOwnProperty("bindDn")) {
     settings.ldap.bindAsUser = true;
   }
-  logger.debug("LdapAuth settings: " + JSON.stringify(settings.ldap, ut.hideSecretsAndLogger, 2));
+  logger.debug("ldap settings: " + JSON.stringify(settings.ldap, ut.hideSecretsAndLogger, 2));
 } else {
   logger.error("LDAP and JWT settings are required. Exiting.");
   process.exit(1);
@@ -57,7 +57,8 @@ if (settings.hasOwnProperty("jwt")) {
 }
 
 app.post(baseUrlPath + "/authenticate", function (req, res) {
-  if (!req.body.username || !req.body.password) {
+  if (typeof req.body?.username !== 'string' || typeof req.body?.password !== 'string' ||
+      !req.body?.username.trim() || !req.body?.password.trim()) {
     logger.warn("No username or password supplied in request");
     res.status(400).send({ error: "No username or password supplied" });
     return false;
@@ -100,6 +101,22 @@ app.get(baseUrlPath + "/health", function (req, res) {
 
 var port = process.env.PORT || 3000;
 
+// Validate required config fields
+if (!settings.ldap.searchBase || !settings.ldap.searchFilter) {
+  logger.error("LDAP configuration missing a required field: settings.ldap.searchBase or settings.ldap.searchFilter");
+  throw new Error("LDAP configuration missing a required field: settings.ldap.searchBase or settings.ldap.searchFilter");
+}
+if (!settings.ldap.searchFilter.includes('{{username}}')) {
+  logger.error("settings.ldap.searchFilter must contain '{{username}}' to scope searches to the authenticating user");
+  throw new Error("settings.ldap.searchFilter must contain '{{username}}'");
+}
+if (settings.ldap.bindAsUser) {
+  if (settings.ldap.binddn_prefix === undefined || settings.ldap.binddn_suffix === undefined) {
+    logger.error("LDAP bindAsUser mode requires both settings.ldap.binddn_prefix and settings.ldap.binddn_suffix");
+    throw new Error("LDAP bindAsUser mode requires both settings.ldap.binddn_prefix and settings.ldap.binddn_suffix");
+  }
+}
+
 if (settings.ssl) { // use httpS
   var options = {
     key: fs.readFileSync("./ssl/server.key"),
@@ -114,7 +131,7 @@ if (settings.ssl) { // use httpS
     if (settings.ldap.bindAsUser) {
       logger.info("Will bind with authenticating user's credentials");
     } else {
-      logger.info("Will bind with service account: " + ut.getGroupCN(settings.ldap.bindDn));
+      logger.info("Will bind with service account: " + settings.ldap.bindDn);
     }
     app.on("error", (err) => {
       logger.error("ERROR: " + err.stack);
