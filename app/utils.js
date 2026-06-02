@@ -184,18 +184,18 @@ async function authenticateWithLdap(username, password, settings) {
   logger.debug(`ldapSettings: ${JSON.stringify(ldapSettings, hideSecretsAndLogger, 4)}`);
 
   // Determine search bind credentials (either user or a service account)
-  let searchBindDn, searchBindCredentials;
+  let bindDn, bindCredentials;
   if (ldapSettings.bindAsUser) { // user
-    searchBindCredentials = password;
+    bindCredentials = password;
     if (isDistinguishedName(username)) {
-      searchBindDn = username;
+      bindDn = username;
     } else {
-      searchBindDn = ldapSettings.binddn_prefix + escapeLdapDnValue(username) + ldapSettings.binddn_suffix;
+      bindDn = ldapSettings.binddn_prefix + escapeLdapDnValue(username) + ldapSettings.binddn_suffix;
     }
-    logger.info("User is attempting bind with: " + searchBindDn); // log ldap-sanitized username
+    logger.info("User is attempting bind with: " + bindDn); // log ldap-sanitized username
   } else { // service account
-    searchBindDn = ldapSettings.bindDn;
-    searchBindCredentials = ldapSettings.bindCredentials;
+    bindDn = ldapSettings.bindDn;
+    bindCredentials = ldapSettings.bindCredentials;
   }
 
   const clientOpts = { url: ldapSettings.url };
@@ -208,7 +208,7 @@ async function authenticateWithLdap(username, password, settings) {
   const searchClient = new Client(clientOpts);
   let userEntry;
   try {
-    await searchClient.bind(searchBindDn, searchBindCredentials);
+    await searchClient.bind(bindDn, bindCredentials);
     let commonName = username;
     if (isDistinguishedName(username)) { // typically, the LDAP search filter prevents authenticating with DN
       commonName = getCommonName(username);
@@ -229,7 +229,7 @@ async function authenticateWithLdap(username, password, settings) {
     userEntry = searchEntries[0];
   } catch (err) {
     if (err instanceof InvalidCredentialsError && !ldapSettings.bindAsUser) {
-      logger.error("Invalid credentials for service account: '" + searchBindDn + "'");
+      logger.error("Invalid credentials for service account: '" + bindDn + "'");
       throw "LDAP service account bind failed";
     }
     throw err;
