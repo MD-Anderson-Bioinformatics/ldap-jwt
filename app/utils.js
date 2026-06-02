@@ -237,6 +237,10 @@ async function authenticateWithLdap(username, password, settings) {
     try { await searchClient.unbind(); } catch (_) {}
   }
 
+  if (ldapSettings.bindAsUser) { // Binding as user, so a successful bind validates user. No need for Step 2 below
+    return userEntry;
+  }
+
   // Step 2: Verify password by binding as the found user
   const verifyClient = new Client(clientOpts);
   try {
