@@ -26,6 +26,7 @@ async function authenticateHandler(username, password, settings, authorized_grou
         (typeof err === "string" && err.match(/no such user/i)) ||
         (typeof err === "string" && err.match(/too many users/i))
       ) {
+        logger.warn('Failed login: InvalidCredentialsError');
         reject({ httpStatus: 401, message: "Wrong username or password" });
         return;
       } else {
@@ -191,7 +192,7 @@ async function authenticateWithLdap(username, password, settings) {
     } else {
       searchBindDn = ldapSettings.binddn_prefix + escapeLdapDnValue(username) + ldapSettings.binddn_suffix;
     }
-    logger.info("User is attempting bind with: " + searchBindDn);
+    logger.info("User is attempting bind with: " + searchBindDn); // log ldap-sanitized username
   } else { // service account
     searchBindDn = ldapSettings.bindDn;
     searchBindCredentials = ldapSettings.bindCredentials;
