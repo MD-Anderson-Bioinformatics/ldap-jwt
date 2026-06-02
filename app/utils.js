@@ -210,7 +210,7 @@ async function authenticateWithLdap(username, password, settings) {
   try {
     await searchClient.bind(bindDn, bindCredentials);
     let commonName = username;
-    if (isDistinguishedName(username)) { // typically, the LDAP search filter prevents authenticating with DN
+    if (isDistinguishedName(username)) { // see GitHub issue 24
       commonName = getCommonName(username);
     }
     const searchFilter = ldapSettings.searchFilter.replace(/\{\{username\}\}/g, escapeLdapFilterValue(commonName));
