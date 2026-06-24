@@ -183,6 +183,24 @@ describe('Testing /health, /authenticate, and /verify endpoints', () => {
     });
     expect(res.statusCode).toEqual(401); // user1 not in groupB, and token does not encode groupB, so this verify should fail
   });
+
+  test('Malformed JSON returns 400', async() => {
+    let res = await request(app).post(baseUrlPath + '/authenticate')
+       .set('Content-Type', 'application/json')
+       .send('{"username": "user1", "password": "password1":}') // extra ':' at the end of the valid JSON
+    expect(res.statusCode).toEqual(400);
+  });
+  test("URL-encoded input works", async() => {
+    let res = await request(app).post(baseUrlPath + '/authenticate')
+       .type('form') // 'form' sets the header: 'Content-Type: application/x-www-form-urlencoded'
+       .send({"username": "user1", "password": "password1"})
+    expect(res.statusCode).toEqual(200);
+  });
+  test('Sending plain string returns 400', async() => {
+    let res = await request(app).post(baseUrlPath + '/authenticate')
+       .send('{"username": "user1", "password": "password1"}')
+    expect(res.statusCode).toEqual(400);
+  });
 });
 
 afterAll(async () => {
