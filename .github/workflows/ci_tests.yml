@@ -22,6 +22,7 @@ jobs:
           -e LDAPAUTH_BINDDN_SUFFIX=",dc=example,dc=com" \
           -e LDAPAUTH_SEARCHBASE="dc=example,dc=com" \
           -e LDAPAUTH_URL=ldap://localhost:3004 \
+          -e LDAP_SEARCHFILTER="(|(distinguishedName={{username}})(mail={{username}}@example.com))" \
           -e LOG_LEVEL=info \
           -e SSL=false \
           ldap-jwt-ci

@@ -20,8 +20,9 @@ const users = [
       ],
       title: 'user-title1',
       uid: 'user1',
-      mail: 'user1@example',
-      displayName: 'User One'
+      mail: 'user1@example.com',
+      displayName: 'User One',
+      distinguishedName: 'cn=user1,dc=example,dc=com'
     }
   },
   {
@@ -35,8 +36,9 @@ const users = [
       ],
       title: 'user-title2',
       uid: 'user2',
-      mail: 'user2@example',
-      displayName: 'User Two'
+      mail: 'user2@example.com',
+      displayName: 'User Two',
+      distinguishedName: 'cn=user2,dc=example,dc=com'
     }
   },
   {
@@ -48,7 +50,8 @@ const users = [
         'cn=bots,dc=group,dc=example,dc=com',
       ],
       uid: 'bothelper',
-      displayName: 'Bot Helper'
+      displayName: 'Bot Helper',
+      distinguishedName: 'cn=bothelper,dc=service,dc=example,dc=com'
     }
   }
 ];
