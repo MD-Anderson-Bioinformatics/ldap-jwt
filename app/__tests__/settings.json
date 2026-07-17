@@ -13,7 +13,7 @@
     ],
     "reconnect": true,
     "connectTimeout": 10000,
-    "searchFilter": "(|(mail={{username}}@example)(distinguishedName={{username}}))",
+    "searchFilter": "(|(distinguishedName={{username}})(mail={{username}}@example.com))",
     "enabled": true
   },
   "jwt": {
