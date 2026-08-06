@@ -45,7 +45,7 @@ describe('Testing /health, /authenticate, and /verify endpoints', () => {
 
   test('valid service account, using distinguished name', async() => {
     let res = await request(app).post(baseUrlPath + '/authenticate').send({
-      username: 'cn=bothelper,dc=example,dc=com',
+      username: 'cn=bothelper,dc=service,dc=example,dc=com',
       password: 'passwordbot'
     });
     expect(res.statusCode).toEqual(200); // valid user, so authenticate should pass
@@ -72,7 +72,7 @@ describe('Testing /health, /authenticate, and /verify endpoints', () => {
 
   test('valid service account, using distinguished name, with group', async() => {
     let res = await request(app).post(baseUrlPath + '/authenticate').send({
-      username: 'cn=bothelper,dc=example,dc=com',
+      username: 'cn=bothelper,dc=service,dc=example,dc=com',
       password: 'passwordbot',
       authorized_groups: 'cn=bots,dc=group,dc=example,dc=com'
     });
